@@ -2723,3 +2723,126 @@ tabgodmode:AddButton("Auto Safe Spot (Enable after Safe Spot)", function()
         end
     end
 end)
+
+local Extra = window:AddTab("Extra")
+
+local targetssLabel = Extra:AddLabel("Kill Targets")
+targetssLabel.TextSize = 26
+
+local targetPlayerNames = {}
+
+Extra:AddTextBox("Player Name", function(text)
+    if text and text ~= "" then
+        local found = false
+        
+        for _, plr in ipairs(game.Players:GetPlayers()) do
+            if plr ~= game.Players.LocalPlayer then
+                local displayName = plr.DisplayName:lower()
+                local playerName = plr.Name:lower()
+                local search = text:lower()
+                
+                if displayName:find(search, 1, true) == 1 or 
+                   playerName:find(search, 1, true) == 1 then
+                    if not table.find(targetPlayerNames, plr.DisplayName) then
+                        table.insert(targetPlayerNames, plr.DisplayName)
+                    end
+                    found = true
+                    break
+                end
+            end
+        end
+        
+        if not found then
+            if not table.find(targetPlayerNames, text) then
+                table.insert(targetPlayerNames, text)
+            end
+        end
+    end
+end)
+
+local targetLabel = Extra:AddLabel("Targets: None")
+targetLabel.TextSize = 23
+targetLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
+
+local function updateTargetLabel()
+    if #targetPlayerNames == 0 then
+        targetLabel.Text = "Targets: None"
+    else
+        local shown = {}
+        for i = 1, math.min(5, #targetPlayerNames) do
+            table.insert(shown, targetPlayerNames[i])
+        end
+        local text = table.concat(shown, ", ")
+        if #targetPlayerNames > 5 then
+            text = text .. "..."
+        end
+        targetLabel.Text = "Targets: " .. text
+    end
+end
+
+Extra:AddButton("Clear Blacklist", function()
+    targetPlayerNames = {}
+    updateTargetLabel()
+end)
+
+task.spawn(function()
+    while true do
+        updateTargetLabel()
+        task.wait(0.3)
+    end
+end)
+
+local nothingLabel = Extra:AddLabel("____________________________________________________")
+nothingLabel.TextSize = 18
+
+
+local killTarget = false
+Extra:AddSwitch("Auto Kill Player", function(bool)
+    killTarget = bool
+
+    while killTarget do
+        local player = game.Players.LocalPlayer
+        if not player then task.wait(0.1) end
+        
+        local target = nil
+        
+        for _, plr in ipairs(game.Players:GetPlayers()) do
+            if plr ~= player then
+                local displayName = plr.DisplayName:lower()
+                local playerName = plr.Name:lower()
+                
+                for _, searchName in ipairs(targetPlayerNames) do
+                    local search = searchName:lower()
+                    if displayName:find(search, 1, true) == 1 or 
+                       playerName:find(search, 1, true) == 1 then
+                        target = plr
+                        break
+                    end
+                end
+                
+                if target then break end
+            end
+        end
+
+        if target then
+            local targetChar = target.Character
+            local rootPart = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
+
+            if rootPart then
+                local character = player.Character
+                local rightHand = character and character:FindFirstChild("RightHand")
+                local leftHand = character and character:FindFirstChild("LeftHand")
+
+                if rightHand and leftHand then
+                    firetouchinterest(rightHand, rootPart, 1)
+                    firetouchinterest(leftHand, rootPart, 1)
+                    task.wait()
+                    firetouchinterest(rightHand, rootPart, 0)
+                    firetouchinterest(leftHand, rootPart, 0)
+                end
+            end
+        end
+
+        task.wait(0.1)
+    end
+end)                                            
