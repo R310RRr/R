@@ -61,8 +61,8 @@ local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/SadOz
 local player = game.Players.LocalPlayer
 local displayName = player.DisplayName or player.Name
 
-local window = library:AddWindow("Kill Anyone | - Welcome " .. displayName, {
-    main_color = Color3.fromRGB(54, 6, 6),
+local window = library:AddWindow("R310RRr PRIVATE KILLER | - Welcome " .. displayName, {
+    main_color = Color3.fromRGB(15, 16, 41),
     min_size = Vector2.new(500, 965),
     can_resize = false,
 })
