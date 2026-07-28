@@ -85,7 +85,7 @@ local function removePortals()
 end
 removePortals()
 
-local Stats = window:AddTab("Stats")
+local Stats = window:AddTab("View Stats")
 
 local SelectPlayerName = ""
 
@@ -1707,7 +1707,7 @@ task.spawn(function()
     end
 end)
 
-local tabteleport = window:AddTab("Teleport")
+local tabteleport = window:AddTab("Miscellaneous")
 
 local titleLabel = tabteleport:AddLabel("Settings")
 titleLabel.TextSize = 18
@@ -2122,7 +2122,7 @@ tabteleport:AddButton("Rejoin Server", function()
     ts:Teleport(game.PlaceId, p)
 end)
 
-local tabgodmode = window:AddTab("God Mode")
+local tabgodmode = window:AddTab("Settings")
 
 local titleLabel = tabgodmode:AddLabel("God Mode Options")
 titleLabel.TextSize = 20
@@ -2724,7 +2724,7 @@ tabgodmode:AddButton("Auto Safe Spot (Enable after Safe Spot)", function()
     end
 end)
 
-local Extra = window:AddTab("Extra")
+local Extra = window:AddTab("Extra Killing")
 
 local targetssLabel = Extra:AddLabel("Kill Targets")
 targetssLabel.TextSize = 26
