@@ -663,7 +663,7 @@ Players.PlayerRemoving:Connect(function(player)
     end
 end)
 
-Killer:AddSwitch("Start Kill Target", function(state)
+Killer:AddSwitch("Kill Target (No Bring)", function(state)
     killTarget = state
 
     task.spawn(function()
@@ -697,6 +697,58 @@ Killer:AddSwitch("Start Kill Target", function(state)
             end
 
             task.wait(0.05)
+        end
+    end)
+end)
+
+local autoKillBring = false
+
+Killer:AddSwitch("Kill Target (Bring Player)", function(state)
+    autoKillBring = state
+    if not state then return end
+
+    task.spawn(function()
+        while autoKillBring do
+            local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+            local myRoot = character:FindFirstChild("HumanoidRootPart")
+            
+            if myRoot then
+                local punch = LocalPlayer.Backpack:FindFirstChild("Punch")
+                if punch and not character:FindFirstChild("Punch") then
+                    punch.Parent = character
+                end
+
+                for _, name in ipairs(targetPlayerNames) do
+                    local target = Players:FindFirstChild(name)
+                    if target and target ~= LocalPlayer and target.Character then
+                        local humanoid = target.Character:FindFirstChild("Humanoid")
+                        local targetRoot = target.Character:FindFirstChild("HumanoidRootPart")
+                        
+                        if targetRoot and humanoid and humanoid.Health > 0 then
+                            pcall(function()
+                                targetRoot.CFrame = myRoot.CFrame * CFrame.new(0, 0, -3)
+                            end)
+
+                            pcall(function()
+                                humanoid:TakeDamage(10)
+                            end)
+
+                            local rightHand = character:FindFirstChild("RightHand")
+                            local leftHand = character:FindFirstChild("LeftHand")
+                            if rightHand and leftHand then
+                                pcall(function()
+                                    firetouchinterest(rightHand, targetRoot, 1)
+                                    firetouchinterest(leftHand, targetRoot, 1)
+                                    firetouchinterest(rightHand, targetRoot, 0)
+                                    firetouchinterest(leftHand, targetRoot, 0)
+                                end)
+                            end
+                        end
+                    end
+                end
+            end
+
+            task.wait(0.2)
         end
     end)
 end)
