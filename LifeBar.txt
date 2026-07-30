@@ -1,0 +1,194 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+
+local function FormatAbbreviated(number)
+    local abbreviations = {"", "K", "M", "B", "T", "Qa", "Qi"}
+    local abbreviationIndex = 1
+    while number >= 1000 and abbreviationIndex < #abbreviations do
+        number = number / 1000
+        abbreviationIndex = abbreviationIndex + 1
+    end
+    if number % 1 == 0 then
+        return string.format("%.0f", number) .. abbreviations[abbreviationIndex]
+    else
+        return string.format("%.2f", number):gsub("%.?0+$", "") .. abbreviations[abbreviationIndex]
+    end
+end
+
+local function getRealPlayerDamage(player)
+    local leaderstats = player:FindFirstChild("leaderstats")
+    local strengthStat = leaderstats and leaderstats:FindFirstChild("Strength")
+    if not strengthStat then return 0 end
+    
+    local baseDamage = strengthStat.Value * 0.0667
+    local totalMultiplier = 1
+    
+    local ultFolder = player:FindFirstChild("ultimatesFolder")
+    if ultFolder then
+        local demonDamage = ultFolder:FindFirstChild("Demon Damage")
+        if demonDamage then
+            totalMultiplier = totalMultiplier + math.min(0.1 * (demonDamage.Value or 0), 0.5)
+        end
+    end
+    
+    local character = player.Character
+    if character then
+        for _, child in ipairs(character:GetChildren()) do
+            if child.Name == "Wild Wizard" then
+                totalMultiplier = totalMultiplier + 0.5
+                break
+            end
+        end
+    end
+    
+    return baseDamage * totalMultiplier
+end
+
+local function CreateESP(player)
+    local NameTag = Drawing.new("Text")
+    local HPTag = Drawing.new("Text")
+    local DMGTag = Drawing.new("Text")
+    
+    NameTag.Size = 25
+    NameTag.Center = true
+    NameTag.Outline = true
+    NameTag.Color = Color3.new(1, 1, 0)
+    NameTag.Font = 2
+
+    HPTag.Size = 25
+    HPTag.Center = true
+    HPTag.Outline = true
+    HPTag.Color = Color3.new(1, 1, 1)
+    HPTag.Font = 2
+
+    DMGTag.Size = 25
+    DMGTag.Center = true
+    DMGTag.Outline = true
+    DMGTag.Color = Color3.new(1, 0, 0)
+    DMGTag.Font = 2
+
+    local isAlive = true
+    local characterConnection = nil
+    local humanoidConnection = nil
+
+    local function setupCharacterMonitoring(char)
+        if humanoidConnection then humanoidConnection:Disconnect() end
+        
+        local humanoid = char:FindFirstChild("Humanoid")
+        if humanoid then
+            isAlive = humanoid.Health > 0
+            
+            humanoidConnection = humanoid.HealthChanged:Connect(function(health)
+                if health <= 0 then
+                    isAlive = false
+                elseif health > 0 and not isAlive then
+                    isAlive = true
+                end
+            end)
+        end
+    end
+
+    characterConnection = player.CharacterAdded:Connect(function(newChar)
+        task.wait(0.5)
+        setupCharacterMonitoring(newChar)
+        isAlive = true
+    end)
+
+    if player.Character then
+        setupCharacterMonitoring(player.Character)
+    end
+
+    local function Update()
+        if not player.Parent or not isAlive then
+            NameTag.Visible = false
+            HPTag.Visible = false
+            DMGTag.Visible = false
+            return
+        end
+
+        local Character = player.Character
+        if Character and Character:FindFirstChild("Humanoid") and Character:FindFirstChild("HumanoidRootPart") and player ~= LocalPlayer then
+            local Humanoid = Character.Humanoid
+            local HeadPos = Character.Head.Position
+            local Camera = workspace.CurrentCamera
+            local ScreenPos, OnScreen = Camera:WorldToViewportPoint(HeadPos + Vector3.new(0, 4.5, 0))
+            
+            if OnScreen then
+                NameTag.Text = player.DisplayName
+                NameTag.Position = Vector2.new(ScreenPos.X, ScreenPos.Y - 70)
+                NameTag.Visible = true
+
+                local health = Humanoid.Health
+                local maxHealth = Humanoid.MaxHealth
+                HPTag.Text = "HP: " .. FormatAbbreviated(health) .. "/" .. FormatAbbreviated(maxHealth)
+                HPTag.Position = Vector2.new(ScreenPos.X, ScreenPos.Y - 40)
+                HPTag.Visible = true
+
+                local currentDmg = getRealPlayerDamage(player)
+                DMGTag.Text = "DMG: " .. FormatAbbreviated(currentDmg)
+                DMGTag.Position = Vector2.new(ScreenPos.X, ScreenPos.Y - 15)
+                DMGTag.Visible = true
+            else
+                NameTag.Visible = false
+                HPTag.Visible = false
+                DMGTag.Visible = false
+            end
+        else
+            NameTag.Visible = false
+            HPTag.Visible = false
+            DMGTag.Visible = false
+        end
+    end
+    
+    return Update, {
+        Character = characterConnection,
+        Humanoid = humanoidConnection
+    }
+end
+
+local ESPTable = {}
+local ESPConnections = {}
+
+local function AddPlayerToESP(player)
+    if player == LocalPlayer then return end
+    if ESPTable[player] then return end 
+    
+    local updateFunc, connections = CreateESP(player)
+    ESPTable[player] = updateFunc
+    ESPConnections[player] = connections
+end
+
+local function RemovePlayerFromESP(player)
+    if ESPTable[player] then
+        ESPTable[player] = nil
+    end
+    if ESPConnections[player] then
+        if ESPConnections[player].Character then ESPConnections[player].Character:Disconnect() end
+        if ESPConnections[player].Humanoid then ESPConnections[player].Humanoid:Disconnect() end
+        ESPConnections[player] = nil
+    end
+end
+
+for _, player in ipairs(Players:GetPlayers()) do
+    AddPlayerToESP(player)
+end
+
+Players.PlayerAdded:Connect(function(player)
+    task.wait(1)
+    AddPlayerToESP(player)
+end)
+
+Players.PlayerRemoving:Connect(function(player)
+    RemovePlayerFromESP(player)
+end)
+
+RunService.RenderStepped:Connect(function()
+    for player, updateFunc in pairs(ESPTable) do
+        if player and player.Parent then
+            updateFunc()
+        else
+            RemovePlayerFromESP(player)
+        end
+    end
+end)
