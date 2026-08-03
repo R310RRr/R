@@ -1286,303 +1286,98 @@ local autoPetSystem = Killer:AddSwitch("Auto Replace Pets", function(state)
     _G.autoPetSystem = state
     
     if state then
-        if not _G.AutoPetGUI then
-            local Players = game:GetService("Players")
-            local LocalPlayer = Players.LocalPlayer
-            local UserInputService = game:GetService("UserInputService")
-            local ReplicatedStorage = game:GetService("ReplicatedStorage")
-            local TweenService = game:GetService("TweenService")
-            
-            local FloatingGUI = Instance.new("ScreenGui")
-            FloatingGUI.Name = "Replace Pets"
-            FloatingGUI.ResetOnSpawn = false
-            FloatingGUI.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-            FloatingGUI.Parent = LocalPlayer:WaitForChild("PlayerGui")
-            
-            local StatusFrame = Instance.new("Frame")
-            StatusFrame.Size = UDim2.fromOffset(240, 110)
-            StatusFrame.Position = UDim2.new(0, 20, 0.5, -40)
-            StatusFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
-            StatusFrame.BackgroundTransparency = 0.1
-            StatusFrame.BorderSizePixel = 0
-            StatusFrame.Parent = FloatingGUI
-            
-            local UICorner = Instance.new("UICorner")
-            UICorner.CornerRadius = UDim.new(0, 12)
-            UICorner.Parent = StatusFrame
-            
-            local Shadow = Instance.new("ImageLabel")
-            Shadow.Size = UDim2.fromScale(1.05, 1.1)
-            Shadow.Position = UDim2.fromScale(-0.025, -0.05)
-            Shadow.BackgroundTransparency = 1
-            Shadow.Image = "rbxassetid://1316045217"
-            Shadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
-            Shadow.ImageTransparency = 0.7
-            Shadow.ScaleType = Enum.ScaleType.Slice
-            Shadow.SliceCenter = Rect.new(10, 10, 118, 118)
-            Shadow.Parent = StatusFrame
-            
-            local TopBar = Instance.new("Frame")
-            TopBar.Size = UDim2.new(1, 0, 0, 30)
-            TopBar.BackgroundColor3 = Color3.fromRGB(30, 136, 229)
-            TopBar.BackgroundTransparency = 0.2
-            TopBar.BorderSizePixel = 0
-            TopBar.Parent = StatusFrame
-            
-            local TopBarCorner = Instance.new("UICorner")
-            TopBarCorner.CornerRadius = UDim.new(0, 12)
-            TopBarCorner.Parent = TopBar
-            
-            local PetIcon = Instance.new("ImageLabel")
-            PetIcon.Size = UDim2.fromOffset(20, 20)
-            PetIcon.Position = UDim2.new(0, 8, 0, 5)
-            PetIcon.BackgroundTransparency = 1
-            PetIcon.Image = "rbxassetid://6023426926"
-            PetIcon.Parent = TopBar
-            
-            local TitleText = Instance.new("TextLabel")
-            TitleText.Size = UDim2.new(1, -36, 0, 30)
-            TitleText.Position = UDim2.new(0, 30, 0, 0)
-            TitleText.BackgroundTransparency = 1
-            TitleText.Text = "Auto Replace Pets"
-            TitleText.TextColor3 = Color3.fromRGB(255, 255, 255)
-            TitleText.Font = Enum.Font.GothamBold
-            TitleText.TextSize = 14
-            TitleText.TextXAlignment = Enum.TextXAlignment.Left
-            TitleText.Parent = TopBar
-            
-            local StatusContainer = Instance.new("Frame")
-            StatusContainer.Size = UDim2.new(1, -20, 0, 25)
-            StatusContainer.Position = UDim2.new(0, 10, 0, 40)
-            StatusContainer.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
-            StatusContainer.BackgroundTransparency = 0.3
-            StatusContainer.BorderSizePixel = 0
-            StatusContainer.Parent = StatusFrame
-            
-            local ContainerCorner = Instance.new("UICorner")
-            ContainerCorner.CornerRadius = UDim.new(0, 6)
-            ContainerCorner.Parent = StatusContainer
-            
-            local StatusIcon = Instance.new("ImageLabel")
-            StatusIcon.Size = UDim2.fromOffset(16, 16)
-            StatusIcon.Position = UDim2.new(0, 6, 0.5, -8)
-            StatusIcon.BackgroundTransparency = 1
-            StatusIcon.Image = "rbxassetid://6031094665"
-            StatusIcon.ImageColor3 = Color3.fromRGB(76, 175, 80)
-            StatusIcon.Parent = StatusContainer
-            
-            local StatusText = Instance.new("TextLabel")
-            StatusText.Size = UDim2.new(1, -60, 1, 0)
-            StatusText.Position = UDim2.new(0, 28, 0, 0)
-            StatusText.BackgroundTransparency = 1
-            StatusText.Text = "Sistema Ativo | Pet: Wild Wizard"
-            StatusText.TextColor3 = Color3.fromRGB(220, 220, 240)
-            StatusText.Font = Enum.Font.Gotham
-            StatusText.TextSize = 13
-            StatusText.TextXAlignment = Enum.TextXAlignment.Left
-            StatusText.Parent = StatusContainer
-            
-            local ToggleButton = Instance.new("TextButton")
-            ToggleButton.Size = UDim2.fromOffset(220, 32)
-            ToggleButton.Position = UDim2.new(0, 10, 0, 75)
-            ToggleButton.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
-            ToggleButton.AutoButtonColor = false
-            ToggleButton.Text = ""
-            ToggleButton.Parent = StatusFrame
-            
-            local ButtonCorner = Instance.new("UICorner")
-            ButtonCorner.CornerRadius = UDim.new(0, 8)
-            ButtonCorner.Parent = ToggleButton
-            
-            local ButtonGradient = Instance.new("UIGradient")
-            ButtonGradient.Color = ColorSequence.new({
-                ColorSequenceKeypoint.new(0, Color3.fromRGB(60, 60, 70)),
-                ColorSequenceKeypoint.new(1, Color3.fromRGB(45, 45, 55))
-            })
-            ButtonGradient.Parent = ToggleButton
-            
-            local ButtonText = Instance.new("TextLabel")
-            ButtonText.Size = UDim2.new(1, 0, 1, 0)
-            ButtonText.BackgroundTransparency = 1
-            ButtonText.Text = "DESLIGAR SISTEMA"
-            ButtonText.TextColor3 = Color3.fromRGB(255, 255, 255)
-            ButtonText.Font = Enum.Font.GothamBold
-            ButtonText.TextSize = 12
-            ButtonText.Parent = ToggleButton
-            
-            local ButtonIcon = Instance.new("ImageLabel")
-            ButtonIcon.Size = UDim2.fromOffset(16, 16)
-            ButtonIcon.Position = UDim2.new(1, -26, 0.5, -8)
-            ButtonIcon.BackgroundTransparency = 1
-            ButtonIcon.Image = "rbxassetid://6035047409"
-            ButtonIcon.ImageColor3 = Color3.fromRGB(255, 100, 100)
-            ButtonIcon.Parent = ToggleButton
-            
-            _G.AutoPetGUI = {
-                ScreenGui = FloatingGUI,
-                StatusFrame = StatusFrame,
-                StatusText = StatusText,
-                StatusIcon = StatusIcon,
-                ToggleButton = ToggleButton,
-                ButtonText = ButtonText,
-                ButtonIcon = ButtonIcon
-            }
-            
-            local systemEnabled = true
-            local respawnCooldown = 5.4
-            local isEquipping = false
-            local EquipPetEvent = ReplicatedStorage:WaitForChild("rEvents"):WaitForChild("equipPetEvent")
-            local PetsFolder = LocalPlayer:WaitForChild("petsFolder")
-            
-            local function animateButton(button, hover)
-                local tweenInfo = TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-                local goals = {BackgroundColor3 = hover and Color3.fromRGB(70, 70, 85) or Color3.fromRGB(50, 50, 60)}
-                TweenService:Create(button, tweenInfo, goals):Play()
+        local Players = game:GetService("Players")
+        local LocalPlayer = Players.LocalPlayer
+        local ReplicatedStorage = game:GetService("ReplicatedStorage")
+        
+        local respawnCooldown = 5.4
+        local isEquipping = false
+        local systemEnabled = true
+        local EquipPetEvent = ReplicatedStorage:WaitForChild("rEvents"):WaitForChild("equipPetEvent")
+        local PetsFolder = LocalPlayer:WaitForChild("petsFolder")
+        
+        local function UnequipAllPets()
+            if not systemEnabled or isEquipping then return end
+            isEquipping = true
+            for _, folder in ipairs(PetsFolder:GetChildren()) do
+                if folder:IsA("Folder") then
+                    for _, pet in ipairs(folder:GetChildren()) do
+                        pcall(function()
+                            EquipPetEvent:FireServer("unequipPet", pet)
+                        end)
+                    end
+                end
             end
-            
-            ToggleButton.MouseEnter:Connect(function() animateButton(ToggleButton, true) end)
-            ToggleButton.MouseLeave:Connect(function() animateButton(ToggleButton, false) end)
-            
-            local function UnequipAllPets()
-                if not systemEnabled or isEquipping then return end
-                isEquipping = true
-                for _, folder in ipairs(PetsFolder:GetChildren()) do
-                    if folder:IsA("Folder") then
-                        for _, pet in ipairs(folder:GetChildren()) do
+            isEquipping = false
+        end
+        
+        local function EquipPetsByName(petName)
+            if not systemEnabled or isEquipping then return 0 end
+            isEquipping = true
+            local count = 0
+            for _, folder in ipairs(PetsFolder:GetChildren()) do
+                if folder:IsA("Folder") then
+                    for _, pet in ipairs(folder:GetChildren()) do
+                        if pet.Name == petName then
                             pcall(function()
-                                EquipPetEvent:FireServer("unequipPet", pet)
+                                EquipPetEvent:FireServer("equipPet", pet)
+                                count += 1
                             end)
                         end
                     end
                 end
-                isEquipping = false
             end
+            isEquipping = false
+            return count
+        end
+        
+        local function SetupCharacterMonitoring(character)
+            local humanoid = character:WaitForChild("Humanoid")
             
-            local function EquipPetsByName(petName)
-                if not systemEnabled or isEquipping then return 0 end
-                isEquipping = true
-                local count = 0
-                for _, folder in ipairs(PetsFolder:GetChildren()) do
-                    if folder:IsA("Folder") then
-                        for _, pet in ipairs(folder:GetChildren()) do
-                            if pet.Name == petName then
-                                pcall(function()
-                                    EquipPetEvent:FireServer("equipPet", pet)
-                                    count += 1
-                                end)
-                            end
-                        end
-                    end
-                end
-                isEquipping = false
-                return count
-            end
-            
-            local function SetupCharacterMonitoring(character)
-                local humanoid = character:WaitForChild("Humanoid")
-                
-                humanoid.Died:Connect(function()
+            humanoid.Died:Connect(function()
+                if systemEnabled then
+                    UnequipAllPets()
+                    task.wait(respawnCooldown)
                     if systemEnabled then
-                        StatusText.Text = "Sistema Ativo | Pet: Mighty Monster"
-                        UnequipAllPets()
-                        task.wait(respawnCooldown)
-                        if systemEnabled then
-                            EquipPetsByName("Mighty Monster")
-                        end
+                        EquipPetsByName("Mighty Monster")
                     end
-                end)
-                
-                character.AncestryChanged:Connect(function(_, parent)
-                    if parent == workspace and systemEnabled then
-                        task.wait(0.5)
-                        if systemEnabled then
-                            StatusText.Text = "Sistema Ativo | Pet: Wild Wizard"
-                            UnequipAllPets()
-                            task.wait(0.3)
-                            EquipPetsByName("Wild Wizard")
-                        end
-                    end
-                end)
-            end
+                end
+            end)
             
-            if LocalPlayer.Character then
-                SetupCharacterMonitoring(LocalPlayer.Character)
-            end
-            
-            LocalPlayer.CharacterAdded:Connect(function(character)
-                task.wait(0.2)
-                SetupCharacterMonitoring(character)
-                if systemEnabled then
+            character.AncestryChanged:Connect(function(_, parent)
+                if parent == workspace and systemEnabled then
                     task.wait(0.5)
-                    UnequipAllPets()
-                    task.wait(0.3)
-                    EquipPetsByName("Wild Wizard")
+                    if systemEnabled then
+                        UnequipAllPets()
+                        task.wait(0.3)
+                        EquipPetsByName("Wild Wizard")
+                    end
                 end
             end)
-            
-            ToggleButton.MouseButton1Click:Connect(function()
-                systemEnabled = not systemEnabled
-                
-                if systemEnabled then
-                    StatusText.Text = "Sistema Ativo | Pet: Wild Wizard"
-                    StatusIcon.ImageColor3 = Color3.fromRGB(76, 175, 80)
-                    ButtonText.Text = "DESLIGAR SISTEMA"
-                    ButtonIcon.ImageColor3 = Color3.fromRGB(255, 100, 100)
-                else
-                    StatusText.Text = "Sistema Desativado"
-                    StatusIcon.ImageColor3 = Color3.fromRGB(255, 80, 80)
-                    ButtonText.Text = "LIGAR SISTEMA"
-                    ButtonIcon.ImageColor3 = Color3.fromRGB(100, 255, 100)
-                    UnequipAllPets()
-                end
-            end)
-            
-            local dragging = false
-            local dragInput
-            local dragStart
-            local startPos
-            
-            local function update(input)
-                local delta = input.Position - dragStart
-                local newPos = UDim2.new(
-                    startPos.X.Scale, startPos.X.Offset + delta.X,
-                    startPos.Y.Scale, startPos.Y.Offset + delta.Y
-                )
-                TweenService:Create(StatusFrame, TweenInfo.new(0.05), {Position = newPos}):Play()
+        end
+        
+        if LocalPlayer.Character then
+            SetupCharacterMonitoring(LocalPlayer.Character)
+        end
+        
+        LocalPlayer.CharacterAdded:Connect(function(character)
+            task.wait(0.2)
+            SetupCharacterMonitoring(character)
+            if systemEnabled then
+                task.wait(0.5)
+                UnequipAllPets()
+                task.wait(0.3)
+                EquipPetsByName("Wild Wizard")
             end
-            
-            StatusFrame.InputBegan:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                    dragging = true
-                    dragStart = input.Position
-                    startPos = StatusFrame.Position
-                    input.Changed:Connect(function()
-                        if input.UserInputState == Enum.UserInputState.End then
-                            dragging = false
-                        end
-                    end)
-                end
-            end)
-            
-            StatusFrame.InputChanged:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseMovement then
-                    dragInput = input
-                end
-            end)
-            
-            UserInputService.InputChanged:Connect(function(input)
-                if input == dragInput and dragging then
-                    update(input)
-                end
-            end)
-            
-        else
-            _G.AutoPetGUI.ScreenGui.Enabled = true
-        end
+        end)
+        
+        task.wait(0.5)
+        UnequipAllPets()
+        task.wait(0.3)
+        EquipPetsByName("Wild Wizard")
+        
     else
-        if _G.AutoPetGUI and _G.AutoPetGUI.ScreenGui then
-            _G.AutoPetGUI.ScreenGui.Enabled = false
-        end
+        systemEnabled = false
         _G.autoPetSystem = nil
     end
 end):Set(true)
