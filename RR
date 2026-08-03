@@ -2897,7 +2897,8 @@ Extra:AddSwitch("Auto Kill Player", function(bool)
 
         task.wait(0.1)
     end
-end)                                            
+end)      
+
 local Player = game.Players.LocalPlayer
 
 local function equipPunch()
@@ -2921,59 +2922,55 @@ local function isFriend(target)
 end
 
 Extra:AddSwitch("Auto Kill QA/QI", function(bool)
-    task.spawn(function()
-        while bool do
-            pcall(function()
-                local char = Player.Character
-                if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    while bool do
+        pcall(function()
+            local char = Player.Character
+            if not char or not char:FindFirstChild("HumanoidRootPart") then return end
 
-                equipPunch()
+            equipPunch()
 
-                local rightHand = char:FindFirstChild("RightHand") or char:FindFirstChild("PunchHandle") or char:FindFirstChild("Handle")
-                local leftHand = char:FindFirstChild("LeftHand")
+            local rightHand = char:FindFirstChild("RightHand") or char:FindFirstChild("PunchHandle") or char:FindFirstChild("Handle")
+            local leftHand = char:FindFirstChild("LeftHand")
 
-                if Player:FindFirstChild("muscleEvent") then
-                    Player.muscleEvent:FireServer("punch", "rightHand")
-                    Player.muscleEvent:FireServer("punch", "leftHand")
-                end
+            if Player:FindFirstChild("muscleEvent") then
+                Player.muscleEvent:FireServer("punch", "rightHand")
+                Player.muscleEvent:FireServer("punch", "leftHand")
+            end
 
-                for _, targetPlayer in pairs(game.Players:GetPlayers()) do
-                    if targetPlayer ~= Player
-                        and targetPlayer.Character
-                        and not isFriend(targetPlayer)
-                        and targetPlayer:FindFirstChild("leaderstats")
-                        and targetPlayer.leaderstats:FindFirstChild("Strength")
-                    then
-                        local strength = targetPlayer.leaderstats.Strength.Value
+            for _, targetPlayer in pairs(game.Players:GetPlayers()) do
+                if targetPlayer ~= Player
+                    and targetPlayer.Character
+                    and not isFriend(targetPlayer)
+                    and targetPlayer:FindFirstChild("leaderstats")
+                    and targetPlayer.leaderstats:FindFirstChild("Strength")
+                then
+                    local strength = targetPlayer.leaderstats.Strength.Value
 
-                        if strength >= 1000000000000000 then
-                            local hrp = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+                    if strength >= 1000000000000000 then
+                        local hrp = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
 
-                            if hrp then
-                                if rightHand then
-                                    firetouchinterest(rightHand, hrp, 0)
-                                    firetouchinterest(rightHand, hrp, 1)
-                                end
+                        if hrp then
+                            if rightHand then
+                                firetouchinterest(rightHand, hrp, 0)
+                                firetouchinterest(rightHand, hrp, 1)
+                            end
 
-                                if leftHand then
-                                    firetouchinterest(leftHand, hrp, 0)
-                                    firetouchinterest(leftHand, hrp, 1)
-                                end
+                            if leftHand then
+                                firetouchinterest(leftHand, hrp, 0)
+                                firetouchinterest(leftHand, hrp, 1)
                             end
                         end
                     end
                 end
-            end)
+            end
+        end)
 
-            task.wait(0.08)
-        end
-    end)
+        task.wait(0.08)
+    end
 end):Set(true)
 
 local LocalPlayer = game.Players.LocalPlayer
 local sizeToSet = 0/0
-local megaSwitchEnabled = false
-local posLockConnection
 local autoDrinkEnabled = false
 
 local farmPosition = CFrame.new(-12510.5, -1.6537845134735107, 28019.103515625)
@@ -3002,28 +2999,23 @@ local function drinkAllTropicalShakes()
     return false
 end
 
-local megaSwitch = Extra:AddSwitch("Auto Water", function(state)
-    megaSwitchEnabled = state
-    autoDrinkEnabled = state
+Extra:AddSwitch("Auto Water", function(bool)
+    autoDrinkEnabled = bool
 
-    if state then
+    if bool then
         local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
         local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
 
         humanoidRootPart.CFrame = farmPosition
-
         local currentPos = humanoidRootPart.CFrame
-        posLockConnection = game:GetService("RunService").Heartbeat:Connect(function()
-            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                LocalPlayer.Character.HumanoidRootPart.CFrame = currentPos
-            end
-        end)
 
-        task.spawn(function()
-            while megaSwitchEnabled do
-                pcall(function()
-                    game:GetService("ReplicatedStorage").rEvents.changeSpeedSizeRemote:InvokeServer("changeSize", sizeToSet)
-                end)
+        while bool do
+            pcall(function()
+                if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                    LocalPlayer.Character.HumanoidRootPart.CFrame = currentPos
+                end
+
+                game:GetService("ReplicatedStorage").rEvents.changeSpeedSizeRemote:InvokeServer("changeSize", sizeToSet)
 
                 local punch = LocalPlayer.Backpack:FindFirstChild("Punch")
                 if punch then
@@ -3046,15 +3038,9 @@ local megaSwitch = Extra:AddSwitch("Auto Water", function(state)
                 if autoDrinkEnabled then
                     drinkAllTropicalShakes()
                 end
+            end)
 
-                task.wait(0.01)
-            end
-        end)
-
-    else
-        if posLockConnection then
-            posLockConnection:Disconnect()
-            posLockConnection = nil
+            task.wait(0.01)
         end
     end
 end):Set(true)
