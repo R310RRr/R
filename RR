@@ -1585,7 +1585,7 @@ local autoPetSystem = Killer:AddSwitch("Auto Replace Pets", function(state)
         end
         _G.autoPetSystem = nil
     end
-end)
+end):Set(true)
 
 local BlockEggs = Killer:AddSwitch("Block Protein Egg", function(Value)
     if Value then
