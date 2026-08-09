@@ -2917,6 +2917,184 @@ Extra:AddSwitch("Anti Statue [ Auto Punch ]", function(Value)
     end
 end)
 
+local antiLagEnabled = false
+local antiLagConnections = {}
+
+Extra:AddSwitch("Anti Lag", function(state)
+    antiLagEnabled = state
+    
+    if state then
+        for _, v in pairs(game:GetDescendants()) do
+            if v:IsA("ParticleEmitter") or v:IsA("Smoke") or v:IsA("Fire") or v:IsA("Sparkles") then
+                v.Enabled = false
+                table.insert(antiLagConnections, v)
+            end
+        end
+        
+        local lighting = game:GetService("Lighting")
+        lighting.GlobalShadows = false
+        lighting.FogEnd = 9e9
+        lighting.Brightness = 0
+        
+        settings().Rendering.QualityLevel = 1
+        
+        for _, v in pairs(game:GetDescendants()) do
+            if v:IsA("Decal") or v:IsA("Texture") then
+                v.Transparency = 1
+            elseif v:IsA("BasePart") and not v:IsA("MeshPart") then
+                v.Material = Enum.Material.SmoothPlastic
+                if v.Parent and (v.Parent:FindFirstChild("Humanoid") or v.Parent.Parent:FindFirstChild("Humanoid")) then
+                else
+                    v.Reflectance = 0
+                end
+            end
+        end
+        
+        for _, v in pairs(lighting:GetChildren()) do
+            if v:IsA("BlurEffect") or v:IsA("SunRaysEffect") or v:IsA("ColorCorrectionEffect") or v:IsA("BloomEffect") or v:IsA("DepthOfFieldEffect") then
+                v.Enabled = false
+                table.insert(antiLagConnections, v)
+            end
+        end
+        
+        game:GetService("StarterGui"):SetCore("SendNotification", {
+            Title = "anti lag activado",
+            Text = "Full optimization applied!",
+            Duration = 5
+        })
+    else
+        for _, v in pairs(antiLagConnections) do
+            if v:IsA("ParticleEmitter") or v:IsA("Smoke") or v:IsA("Fire") or v:IsA("Sparkles") then
+                pcall(function() v.Enabled = true end)
+            elseif v:IsA("BlurEffect") or v:IsA("SunRaysEffect") or v:IsA("ColorCorrectionEffect") or v:IsA("BloomEffect") or v:IsA("DepthOfFieldEffect") then
+                pcall(function() v.Enabled = true end)
+            end
+        end
+        antiLagConnections = {}
+        
+        local lighting = game:GetService("Lighting")
+        lighting.GlobalShadows = true
+        lighting.FogEnd = 100000
+        lighting.Brightness = 1
+        
+        game:GetService("StarterGui"):SetCore("SendNotification", {
+            Title = "Anti Lag",
+            Text = "Optimization disabled!",
+            Duration = 0
+        })
+    end
+end):Set(true)
+
+local fullOptEnabled = false
+local fullOptSky = nil
+local fullOptLoop = nil
+
+Extra:AddSwitch("Full Optimization (Black Screen)", function(state)
+    fullOptEnabled = state
+    local player = game.Players.LocalPlayer
+    local playerGui = player:WaitForChild("PlayerGui")
+    local lighting = game:GetService("Lighting")
+    
+    if state then
+        for _, gui in pairs(playerGui:GetChildren()) do
+            if gui:IsA("ScreenGui") then
+                gui:Destroy()
+            end
+        end
+        
+        for _, v in pairs(lighting:GetChildren()) do
+            if v:IsA("Sky") then
+                v:Destroy()
+            end
+        end
+        
+        local darkSky = Instance.new("Sky")
+        darkSky.Name = "DarkSky"
+        darkSky.SkyboxBk = "rbxassetid://0"
+        darkSky.SkyboxDn = "rbxassetid://0"
+        darkSky.SkyboxFt = "rbxassetid://0"
+        darkSky.SkyboxLf = "rbxassetid://0"
+        darkSky.SkyboxRt = "rbxassetid://0"
+        darkSky.SkyboxUp = "rbxassetid://0"
+        darkSky.Parent = lighting
+        fullOptSky = darkSky
+        
+        lighting.Brightness = 0
+        lighting.ClockTime = 0
+        lighting.TimeOfDay = "00:00:00"
+        lighting.OutdoorAmbient = Color3.new(0, 0, 0)
+        lighting.Ambient = Color3.new(0, 0, 0)
+        lighting.FogColor = Color3.new(0, 0, 0)
+        lighting.FogEnd = 100
+        
+        fullOptLoop = task.spawn(function()
+            while fullOptEnabled do
+                task.wait(5)
+                if not lighting:FindFirstChild("DarkSky") then
+                    local newSky = darkSky:Clone()
+                    newSky.Parent = lighting
+                    fullOptSky = newSky
+                end
+                lighting.Brightness = 0
+                lighting.ClockTime = 0
+                lighting.OutdoorAmbient = Color3.new(0, 0, 0)
+                lighting.Ambient = Color3.new(0, 0, 0)
+                lighting.FogColor = Color3.new(0, 0, 0)
+                lighting.FogEnd = 100
+            end
+        end)
+        
+        for _, obj in pairs(workspace:GetDescendants()) do
+            if obj:IsA("ParticleEmitter") then
+                obj:Destroy()
+            end
+        end
+        
+        for _, obj in pairs(workspace:GetDescendants()) do
+            if obj:IsA("PointLight") or obj:IsA("SpotLight") or obj:IsA("SurfaceLight") then
+                obj:Destroy()
+            end
+        end
+        
+        game:GetService("StarterGui"):SetCore("SendNotification", {
+            Title = "Full Optimization",
+            Text = "Optimization enabled!",
+            Duration = 3
+        })
+        
+    else
+        if fullOptSky then
+            fullOptSky:Destroy()
+            fullOptSky = nil
+        end
+        
+        for _, v in pairs(lighting:GetChildren()) do
+            if v:IsA("Sky") and v.Name == "DarkSky" then
+                v:Destroy()
+            end
+        end
+        
+        lighting.Brightness = 1
+        lighting.ClockTime = 12
+        lighting.TimeOfDay = "12:00:00"
+        lighting.OutdoorAmbient = Color3.new(0.5, 0.5, 0.5)
+        lighting.Ambient = Color3.new(0.5, 0.5, 0.5)
+        lighting.FogColor = Color3.new(0.5, 0.5, 0.5)
+        lighting.FogEnd = 100000
+        
+        if fullOptLoop then
+            task.cancel(fullOptLoop)
+            fullOptLoop = nil
+        end
+        
+        game:GetService("StarterGui"):SetCore("SendNotification", {
+            Title = "Full Optimization",
+            Text = "Optimization disabled!",
+            Duration = 0
+        })
+    end
+end)
+
 local nothingLabel = Extra:AddLabel("____________________________________________________")
 nothingLabel.TextSize = 18
 
