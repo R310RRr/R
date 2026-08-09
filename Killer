@@ -2943,8 +2943,7 @@ Extra:AddSwitch("Anti Lag", function(state)
                 v.Transparency = 1
             elseif v:IsA("BasePart") and not v:IsA("MeshPart") then
                 v.Material = Enum.Material.SmoothPlastic
-                if v.Parent and (v.Parent:FindFirstChild("Humanoid") or v.Parent.Parent:FindFirstChild("Humanoid")) then
-                else
+                if not (v.Parent and (v.Parent:FindFirstChild("Humanoid") or (v.Parent.Parent and v.Parent.Parent:FindFirstChild("Humanoid")))) then
                     v.Reflectance = 0
                 end
             end
@@ -2958,8 +2957,8 @@ Extra:AddSwitch("Anti Lag", function(state)
         end
         
         game:GetService("StarterGui"):SetCore("SendNotification", {
-            Title = "anti lag activado",
-            Text = "Full optimization applied!",
+            Title = "Anti Lag",
+            Text = "Optimization enabled!",
             Duration = 5
         })
     else
