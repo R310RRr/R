@@ -2920,7 +2920,8 @@ end)
 local nothingLabel = Extra:AddLabel("____________________________________________________")
 nothingLabel.TextSize = 18
 
-Extra:AddLabel("Packs QoL")
+local PackLabel = Extra:AddLabel("Packs QoL")
+PackLabel.TextSize = 25
 
 local ESPEnabled = false
 local ESPObjects = {}
