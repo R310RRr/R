@@ -34,7 +34,7 @@ end)
 
 local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/R310RRr/U/refs/heads/main/I"))()
 
-local window = library:AddWindow("                    PRIVATE KILLER", {
+local window = library:AddWindow("                                                  R310RRr | PRIVATE KILLER", {
     main_color = Color3.fromRGB(0, 0, 0),
     min_size = Vector2.new(490, 965),
     can_resize = false,
