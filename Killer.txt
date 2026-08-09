@@ -2834,3 +2834,543 @@ local megaSwitch = Extra:AddSwitch("Auto Water", function(state)
         end
     end
 end):Set(true)
+
+local AntiStatueEnabled = false
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local TargetCFrame = CFrame.new(2.90918088, 85.5627899, 243.827026, 0.999048233, -7.404807e-10, 0.0436196439, 3.1804221e-9, 1, -5.5867364e-8, -0.0436196439, 5.5952917e-8, 0.999048233)
+
+local function TeleportOnRespawn(character)
+    if not AntiStatueEnabled then return end
+    local hrp = character:WaitForChild("HumanoidRootPart", 5)
+    if hrp then
+        task.wait(0.1)
+        hrp.CFrame = TargetCFrame
+    end
+end
+
+Players.LocalPlayer.CharacterAdded:Connect(TeleportOnRespawn)
+
+local function GetTool(name, character)
+    return LocalPlayer.Backpack:FindFirstChild(name) or (character and character:FindFirstChild(name))
+end
+
+local function EquipPunch(character)
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    if not humanoid then return end
+    local punch = GetTool("Punch", character)
+    if (punch and punch:IsA("Tool")) then
+        humanoid:EquipTool(punch)
+        local attackTime = punch:FindFirstChild("attackTime")
+        if (attackTime and attackTime:IsA("NumberValue")) then
+            attackTime.Value = 0
+        end
+    end
+end
+
+Extra:AddSwitch("Anti Statue [ Auto Punch ]", function(Value)
+    AntiStatueEnabled = Value
+    _G.autoPunchActive = Value
+    
+    if Value then
+        local character = LocalPlayer.Character
+        if (character and character:FindFirstChild("HumanoidRootPart")) then
+            character.HumanoidRootPart.CFrame = TargetCFrame
+        end
+        
+        task.spawn(function()
+            while _G.autoPunchActive do
+                local char = LocalPlayer.Character
+                EquipPunch(char)
+                task.wait(0.1)
+            end
+        end)
+        
+        task.spawn(function()
+            while _G.autoPunchActive do
+                local char = LocalPlayer.Character
+                local punch = char and char:FindFirstChild("Punch")
+                if (punch and punch:IsA("Tool")) then
+                    punch:Activate()
+                end
+                task.wait()
+            end
+        end)
+        
+        if not _G.autoPunchRespawnConn then
+            _G.autoPunchRespawnConn = LocalPlayer.CharacterAdded:Connect(function(char)
+                if not _G.autoPunchActive then return end
+                task.wait(0.5)
+                EquipPunch(char)
+            end)
+        end
+    else
+        local character = LocalPlayer.Character
+        if character then
+            local punch = character:FindFirstChild("Punch")
+            if punch then punch.Parent = LocalPlayer.Backpack end
+        end
+        if _G.autoPunchRespawnConn then
+            _G.autoPunchRespawnConn:Disconnect()
+            _G.autoPunchRespawnConn = nil
+        end
+    end
+end)
+
+local nothingLabel = Extra:AddLabel("____________________________________________________")
+nothingLabel.TextSize = 18
+
+Extra:AddLabel("Packs QoL")
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+local ESPEnabled = false
+local ESPObjects = {}
+
+local function FormatNumber(n)
+    n = tonumber(n) or 0
+    if (n < 1000) then
+        return tostring(math.floor(n))
+    elseif (n < 1000000) then
+        return string.format("%.1fk", n/1000):gsub("%.0k", "k")
+    elseif (n < 1000000000) then
+        return string.format("%.1fm", n/1000000):gsub("%.0m", "m")
+    elseif (n < 999999995904) then
+        return string.format("%.1fb", n/1000000000):gsub("%.0b", "b")
+    elseif (n < 999999986991104) then
+        return string.format("%.1ft", n/999999995904):gsub("%.0t", "t")
+    elseif (n < 1000000000000000000) then
+        return string.format("%.1fqa", n/999999986991104):gsub("%.0qa", "qa")
+    else
+        return string.format("%.1fqi", n/1000000000000000000):gsub("%.0qi", "qi")
+    end
+end
+
+local function GetStat(player, name)
+    local success, value = pcall(function()
+        local stats = player:FindFirstChild("leaderstats")
+        if (stats and stats:FindFirstChild(name)) then
+            return stats[name].Value
+        end
+        if player:FindFirstChild(name) then
+            return player[name].Value
+        end
+        local private = player:FindFirstChild("PrivateStats")
+        if (private and private:FindFirstChild(name)) then
+            return private[name].Value
+        end
+        return nil
+    end)
+    return (success and value) or nil
+end
+
+local function GetPetDamage(player)
+    local total = 0
+    local success = pcall(function()
+        local folders = {
+            player:FindFirstChild("Pets"),
+            player:FindFirstChild("EquippedPets"),
+            player:FindFirstChild("Items"),
+            player:FindFirstChild("Inventory"),
+            player:FindFirstChild("PrivateStats"),
+            player:FindFirstChild("Data")
+        }
+        for _, folder in ipairs(folders) do
+            if folder then
+                for _, obj in ipairs(folder:GetDescendants()) do
+                    if ((obj.Name == "Damage") and (obj:IsA("NumberValue") or obj:IsA("IntValue"))) then
+                        total = total + (tonumber(obj.Value) or 0)
+                    end
+                end
+            end
+        end
+    end)
+    return (success and total) or 0
+end
+
+local function CreateESP(player)
+    if (player == LocalPlayer) then return end
+    if ESPObjects[player] then return end
+    
+    local char = player.Character
+    if not char then return end
+    local head = char:FindFirstChild("Head")
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
+    if not head then return end
+    
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "HealthESP"
+    billboard.Adornee = head
+    billboard.Size = UDim2.new(0, 240, 0, 75)
+    billboard.StudsOffset = Vector3.new(0, 3.5, 0)
+    billboard.AlwaysOnTop = true
+    billboard.MaxDistance = 500
+    billboard.Parent = head
+    
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.Name = "Username"
+    nameLabel.Size = UDim2.new(1, 0, 0, 22)
+    nameLabel.Position = UDim2.new(0, 0, 0, 0)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.Text = player.DisplayName
+    nameLabel.TextColor3 = Color3.fromRGB(255,255,255)
+    nameLabel.TextStrokeTransparency = 0.4
+    nameLabel.TextStrokeColor3 = Color3.fromRGB(0,0,0)
+    nameLabel.Font = Enum.Font.Bangers
+    nameLabel.TextSize = 18
+    nameLabel.TextXAlignment = Enum.TextXAlignment.Center
+    nameLabel.Parent = billboard
+    
+    local healthLabel = Instance.new("TextLabel")
+    healthLabel.Name = "Health"
+    healthLabel.Size = UDim2.new(1, 0, 0, 20)
+    healthLabel.Position = UDim2.new(0, 0, 0, 24)
+    healthLabel.BackgroundTransparency = 1
+    healthLabel.Text = "HP: ?"
+    healthLabel.TextColor3 = Color3.fromRGB(100,255,130)
+    healthLabel.TextStrokeTransparency = 0.4
+    healthLabel.TextStrokeColor3 = Color3.fromRGB(0,0,0)
+    healthLabel.Font = Enum.Font.Bangers
+    healthLabel.TextSize = 16
+    healthLabel.TextXAlignment = Enum.TextXAlignment.Center
+    healthLabel.Parent = billboard
+    
+    local damageLabel = Instance.new("TextLabel")
+    damageLabel.Name = "Damage"
+    damageLabel.Size = UDim2.new(1, 0, 0, 20)
+    damageLabel.Position = UDim2.new(0, 0, 0, 46)
+    damageLabel.BackgroundTransparency = 1
+    damageLabel.Text = "Damage: ?"
+    damageLabel.TextColor3 = Color3.fromRGB(255,60,60)
+    damageLabel.TextStrokeTransparency = 0.4
+    damageLabel.TextStrokeColor3 = Color3.fromRGB(0,0,0)
+    damageLabel.Font = Enum.Font.Bangers
+    damageLabel.TextSize = 16
+    damageLabel.TextXAlignment = Enum.TextXAlignment.Center
+    damageLabel.Parent = billboard
+    
+    ESPObjects[player] = {
+        Billboard = billboard,
+        HealthLabel = healthLabel,
+        DamageLabel = damageLabel,
+        Humanoid = humanoid
+    }
+end
+
+local function RemoveESP(player)
+    if ESPObjects[player] then
+        if ESPObjects[player].Billboard then
+            ESPObjects[player].Billboard:Destroy()
+        end
+        ESPObjects[player] = nil
+    end
+end
+
+local function UpdateESP()
+    for player, data in pairs(ESPObjects) do
+        if (not player or not player.Parent or not player.Character) then
+            RemoveESP(player)
+            continue
+        end
+        
+        local durability = GetStat(player, "Durability")
+        local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+        
+        if durability then
+            local maxHP = durability
+            local currentHP = maxHP
+            if (humanoid and (humanoid.MaxHealth > 0)) then
+                local ratio = humanoid.Health / humanoid.MaxHealth
+                if ((ratio >= 0) and (ratio <= 1.05)) then
+                    currentHP = math.floor(maxHP * ratio)
+                end
+            end
+            data.HealthLabel.Text = "HP: " .. FormatNumber(currentHP) .. " / " .. FormatNumber(maxHP)
+        else
+            data.HealthLabel.Text = "HP: N/A"
+        end
+        
+        local strength = GetStat(player, "Strength")
+        if strength then
+            local baseDamage = strength / 15
+            local petDamage = GetPetDamage(player)
+            local totalDamage = baseDamage + petDamage
+            data.DamageLabel.Text = "Damage: " .. FormatNumber(totalDamage)
+        else
+            data.DamageLabel.Text = "Damage: N/A"
+        end
+    end
+end
+
+local function OnCharacterAdded(player)
+    player.CharacterAdded:Connect(function()
+        task.wait(0.6)
+        if ESPEnabled then
+            CreateESP(player)
+        end
+    end)
+    player.CharacterRemoving:Connect(function()
+        RemoveESP(player)
+    end)
+end
+
+for _, player in ipairs(Players:GetPlayers()) do
+    OnCharacterAdded(player)
+end
+
+Players.PlayerAdded:Connect(function(player)
+    OnCharacterAdded(player)
+    if (ESPEnabled and player.Character) then
+        task.wait(0.6)
+        CreateESP(player)
+    end
+end)
+
+Players.PlayerRemoving:Connect(function(player)
+    RemoveESP(player)
+end)
+
+RunService.RenderStepped:Connect(function()
+    if ESPEnabled then
+        UpdateESP()
+    end
+end)
+
+Extra:AddButton("Display Health", function()
+    ESPEnabled = not ESPEnabled
+    if ESPEnabled then
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player.Character then
+                CreateESP(player)
+            end
+        end
+        print("[ESP] Display Health enabled (real damage = Strength/15 + pets)")
+    else
+        for player, _ in pairs(ESPObjects) do
+            RemoveESP(player)
+        end
+        print("[ESP] Display Health disabled")
+    end
+end)
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local LocalPlayer = Players.LocalPlayer
+local running = false
+
+local function getRemote()
+    local rEvents = ReplicatedStorage:FindFirstChild("rEvents")
+    if not rEvents then return end
+    return rEvents:FindFirstChild("equipPetEvent")
+end
+
+local function unequipAll(remote, petsFolder)
+    for _, folder in pairs(petsFolder:GetChildren()) do
+        if folder:IsA("Folder") then
+            for _, pet in pairs(folder:GetChildren()) do
+                remote:FireServer("unequipPet", pet)
+            end
+        end
+    end
+end
+
+local function getPets(folder, name)
+    local t = {}
+    for _, pet in pairs(folder:GetChildren()) do
+        if (pet.Name == name) then
+            table.insert(t, pet)
+        end
+    end
+    return t
+end
+
+local function EquipMightyMonsters()
+    local petsFolder = LocalPlayer:FindFirstChild("petsFolder")
+    if not petsFolder then return end
+    local unique = petsFolder:FindFirstChild("Unique")
+    if not unique then return end
+    local remote = getRemote()
+    if not remote then return end
+    local count = 0
+    for _, pet in pairs(unique:GetChildren()) do
+        if (pet.Name == "Mighty Monster") then
+            remote:FireServer("equipPet", pet)
+            count = count + 1
+            if (count >= 8) then break end
+            task.wait(0.05)
+        end
+    end
+end
+
+local function EquipWildWizards()
+    local petsFolder = LocalPlayer:FindFirstChild("petsFolder")
+    if not petsFolder then return end
+    local unique = petsFolder:FindFirstChild("Unique")
+    if not unique then return end
+    local remote = getRemote()
+    if not remote then return end
+    local count = 0
+    for _, pet in pairs(unique:GetChildren()) do
+        if (pet.Name == "Wild Wizard") then
+            remote:FireServer("equipPet", pet)
+            count = count + 1
+            if (count >= 8) then break end
+            task.wait(0.05)
+        end
+    end
+end
+
+Extra:AddButton("Smart Pack Spam", function()
+    if running then return end
+    running = true
+    task.spawn(function()
+        local petsFolder = LocalPlayer:FindFirstChild("petsFolder")
+        if not petsFolder then warn("petsFolder not found") running = false return end
+        local unique = petsFolder:FindFirstChild("Unique")
+        if not unique then warn("Unique folder not found") running = false return end
+        local remote = getRemote()
+        if not remote then warn("equipPetEvent not found") running = false return end
+        while running do
+            unequipAll(remote, petsFolder)
+            task.wait(0.001)
+            local mighty = getPets(unique, "Mighty Monster")
+            for i = 1, math.min(8, #mighty) do
+                if not running then return end
+                remote:FireServer("equipPet", mighty[i])
+                task.wait(0.001)
+            end
+            task.wait(0.001)
+            unequipAll(remote, petsFolder)
+            task.wait(0.001)
+            local wizard = getPets(unique, "Wild Wizard")
+            for i = 1, math.min(8, #wizard) do
+                if not running then return end
+                remote:FireServer("equipPet", wizard[i])
+                task.wait(0.001)
+            end
+            task.wait(0.001)
+        end
+    end)
+end)
+
+Extra:AddButton("Stop Spaming", function()
+    running = false
+    print("[PackSpam]: Stopped")
+end)
+
+Extra:AddButton("Equip Health Packs", function()
+    local petsFolder = LocalPlayer:FindFirstChild("petsFolder")
+    if petsFolder then
+        local remote = getRemote()
+        if remote then
+            unequipAll(remote, petsFolder)
+        end
+    end
+    task.wait(0.05)
+    EquipMightyMonsters()
+end)
+
+Extra:AddButton("Equip Damage Packs", function()
+    local petsFolder = LocalPlayer:FindFirstChild("petsFolder")
+    if petsFolder then
+        local remote = getRemote()
+        if remote then
+            unequipAll(remote, petsFolder)
+        end
+    end
+    task.wait(0.05)
+    EquipWildWizards()
+end)
+
+Extra:AddButton("Start Pack Spam", function()
+    if running then return end
+    running = true
+    task.spawn(function()
+        local petsFolder = LocalPlayer:FindFirstChild("petsFolder")
+        if not petsFolder then warn("petsFolder not found") running = false return end
+        local unique = petsFolder:FindFirstChild("Unique")
+        if not unique then warn("Unique folder not found") running = false return end
+        local remote = getRemote()
+        if not remote then warn("equipPetEvent not found") running = false return end
+        while running do
+            unequipAll(remote, petsFolder)
+            task.wait(0.001)
+            local mighty = getPets(unique, "Mighty Monster")
+            for i = 1, math.min(8, #mighty) do
+                if not running then return end
+                remote:FireServer("equipPet", mighty[i])
+                task.wait(0.001)
+            end
+            task.wait(0.001)
+            unequipAll(remote, petsFolder)
+            task.wait(0)
+            local wizard = getPets(unique, "Wild Wizard")
+            for i = 1, math.min(0, #wizard) do
+                if not running then return end
+                remote:FireServer("equipPet", wizard[i])
+                task.wait(0)
+            end
+            task.wait(0)
+        end
+    end)
+end)
+
+Extra:AddButton("Stop Pack Spam", function()
+    running = false
+    print("[PackSpam]: Stopped")
+end)
+
+Extra:AddButton("Equip Wild Wizard", function()
+    local petsFolder = LocalPlayer:FindFirstChild("petsFolder")
+    if not petsFolder then return end
+    local unique = petsFolder:FindFirstChild("Unique")
+    if not unique then return end
+    local remote = getRemote()
+    if not remote then return end
+    for _, folder in pairs(petsFolder:GetChildren()) do
+        if folder:IsA("Folder") then
+            for _, pet in pairs(folder:GetChildren()) do
+                remote:FireServer("unequipPet", pet)
+            end
+        end
+    end
+    task.wait(0.2)
+    local petsToEquip = {}
+    for _, pet in pairs(unique:GetChildren()) do
+        if (pet.Name == "Wild Wizard") then
+            table.insert(petsToEquip, pet)
+        end
+    end
+    for i = 1, math.min(8, #petsToEquip) do
+        remote:FireServer("equipPet", petsToEquip[i])
+        task.wait(0.1)
+    end
+end)
+
+Extra:AddButton("Equip Mighty Monster", function()
+    local petsFolder = LocalPlayer:FindFirstChild("petsFolder")
+    if not petsFolder then return end
+    local unique = petsFolder:FindFirstChild("Unique")
+    if not unique then return end
+    local remote = getRemote()
+    if not remote then return end
+    for _, folder in pairs(petsFolder:GetChildren()) do
+        if folder:IsA("Folder") then
+            for _, pet in pairs(folder:GetChildren()) do
+                remote:FireServer("unequipPet", pet)
+            end
+        end
+    end
+    task.wait(0.2)
+    local petsToEquip = {}
+    for _, pet in pairs(unique:GetChildren()) do
+        if (pet.Name == "Mighty Monster") then
+            table.insert(petsToEquip, pet)
+        end
+    end
+    for i = 1, math.min(8, #petsToEquip) do
+        remote:FireServer("equipPet", petsToEquip[i])
+        task.wait(0.1)
+    end
+end)
