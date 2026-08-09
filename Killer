@@ -2921,6 +2921,7 @@ local antiLagEnabled = false
 local antiLagConnections = {}
 
 Extra:AddSwitch("Anti Lag", function(state)
+    if state == antiLagEnabled then return end
     antiLagEnabled = state
     
     if state then
@@ -2959,15 +2960,17 @@ Extra:AddSwitch("Anti Lag", function(state)
         game:GetService("StarterGui"):SetCore("SendNotification", {
             Title = "Anti Lag",
             Text = "Optimization enabled!",
-            Duration = 5
+            Duration = 3
         })
     else
         for _, v in pairs(antiLagConnections) do
-            if v:IsA("ParticleEmitter") or v:IsA("Smoke") or v:IsA("Fire") or v:IsA("Sparkles") then
-                pcall(function() v.Enabled = true end)
-            elseif v:IsA("BlurEffect") or v:IsA("SunRaysEffect") or v:IsA("ColorCorrectionEffect") or v:IsA("BloomEffect") or v:IsA("DepthOfFieldEffect") then
-                pcall(function() v.Enabled = true end)
-            end
+            pcall(function()
+                if v:IsA("ParticleEmitter") or v:IsA("Smoke") or v:IsA("Fire") or v:IsA("Sparkles") then
+                    v.Enabled = true
+                elseif v:IsA("BlurEffect") or v:IsA("SunRaysEffect") or v:IsA("ColorCorrectionEffect") or v:IsA("BloomEffect") or v:IsA("DepthOfFieldEffect") then
+                    v.Enabled = true
+                end
+            end)
         end
         antiLagConnections = {}
         
@@ -2989,21 +2992,24 @@ local fullOptSky = nil
 local fullOptLoop = nil
 
 Extra:AddSwitch("Full Optimization (Black Screen)", function(state)
+    if state == fullOptEnabled then return end
     fullOptEnabled = state
     local player = game.Players.LocalPlayer
-    local playerGui = player:WaitForChild("PlayerGui")
     local lighting = game:GetService("Lighting")
     
     if state then
-        for _, gui in pairs(playerGui:GetChildren()) do
-            if gui:IsA("ScreenGui") then
-                gui:Destroy()
+        local playerGui = player:FindFirstChild("PlayerGui")
+        if playerGui then
+            for _, gui in pairs(playerGui:GetChildren()) do
+                if gui:IsA("ScreenGui") then
+                    pcall(function() gui:Destroy() end)
+                end
             end
         end
         
         for _, v in pairs(lighting:GetChildren()) do
             if v:IsA("Sky") then
-                v:Destroy()
+                pcall(function() v:Destroy() end)
             end
         end
         
@@ -3026,32 +3032,30 @@ Extra:AddSwitch("Full Optimization (Black Screen)", function(state)
         lighting.FogColor = Color3.new(0, 0, 0)
         lighting.FogEnd = 100
         
-        fullOptLoop = task.spawn(function()
-            while fullOptEnabled do
-                task.wait(5)
-                if not lighting:FindFirstChild("DarkSky") then
-                    local newSky = darkSky:Clone()
-                    newSky.Parent = lighting
-                    fullOptSky = newSky
+        fullOptLoop = game:GetService("RunService").Heartbeat:Connect(function()
+            if not fullOptEnabled then
+                if fullOptLoop then
+                    fullOptLoop:Disconnect()
+                    fullOptLoop = nil
                 end
-                lighting.Brightness = 0
-                lighting.ClockTime = 0
-                lighting.OutdoorAmbient = Color3.new(0, 0, 0)
-                lighting.Ambient = Color3.new(0, 0, 0)
-                lighting.FogColor = Color3.new(0, 0, 0)
-                lighting.FogEnd = 100
+                return
             end
+            if not lighting:FindFirstChild("DarkSky") then
+                local newSky = darkSky:Clone()
+                newSky.Parent = lighting
+                fullOptSky = newSky
+            end
+            lighting.Brightness = 0
+            lighting.ClockTime = 0
+            lighting.OutdoorAmbient = Color3.new(0, 0, 0)
+            lighting.Ambient = Color3.new(0, 0, 0)
+            lighting.FogColor = Color3.new(0, 0, 0)
+            lighting.FogEnd = 100
         end)
         
         for _, obj in pairs(workspace:GetDescendants()) do
-            if obj:IsA("ParticleEmitter") then
-                obj:Destroy()
-            end
-        end
-        
-        for _, obj in pairs(workspace:GetDescendants()) do
-            if obj:IsA("PointLight") or obj:IsA("SpotLight") or obj:IsA("SurfaceLight") then
-                obj:Destroy()
+            if obj:IsA("ParticleEmitter") or obj:IsA("PointLight") or obj:IsA("SpotLight") or obj:IsA("SurfaceLight") then
+                pcall(function() obj:Destroy() end)
             end
         end
         
@@ -3063,13 +3067,13 @@ Extra:AddSwitch("Full Optimization (Black Screen)", function(state)
         
     else
         if fullOptSky then
-            fullOptSky:Destroy()
+            pcall(function() fullOptSky:Destroy() end)
             fullOptSky = nil
         end
         
         for _, v in pairs(lighting:GetChildren()) do
             if v:IsA("Sky") and v.Name == "DarkSky" then
-                v:Destroy()
+                pcall(function() v:Destroy() end)
             end
         end
         
@@ -3082,7 +3086,7 @@ Extra:AddSwitch("Full Optimization (Black Screen)", function(state)
         lighting.FogEnd = 100000
         
         if fullOptLoop then
-            task.cancel(fullOptLoop)
+            pcall(function() fullOptLoop:Disconnect() end)
             fullOptLoop = nil
         end
         
