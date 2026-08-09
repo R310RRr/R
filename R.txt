@@ -20,7 +20,7 @@ local whitelist = {
 }
 
 if not whitelist[LocalPlayer.Name] then
-    LocalPlayer:Kick("Voce nao esta na whitelist para usar este script.")
+    LocalPlayer:Kick("Not Whitelisted")
     return
 end
 
@@ -32,13 +32,10 @@ game:GetService("Players").LocalPlayer.Idled:Connect(function()
     game:GetService("VirtualUser"):Button2Up(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
 end)
 
-local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/SadOz8/Uiiiiiii/refs/heads/main/iiiiiiii"))()
+local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/R310RRr/U/refs/heads/main/I"))()
 
-local player = game.Players.LocalPlayer
-local displayName = player.DisplayName or player.Name
-
-local window = library:AddWindow("R310RRr PRIVATE KILLER | - Welcome " .. displayName, {
-    main_color = Color3.fromRGB(15, 16, 41),
+local window = library:AddWindow("PRIVATE KILLER", {
+    main_color = Color3.fromRGB(0, 0, 0),
     min_size = Vector2.new(500, 965),
     can_resize = false,
 })
