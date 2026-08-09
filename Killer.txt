@@ -2922,9 +2922,6 @@ nothingLabel.TextSize = 18
 
 Extra:AddLabel("Packs QoL")
 
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local RunService = game:GetService("RunService")
 local ESPEnabled = false
 local ESPObjects = {}
 
@@ -2990,7 +2987,7 @@ local function GetPetDamage(player)
 end
 
 local function CreateESP(player)
-    if (player == LocalPlayer) then return end
+    if (player == game.Players.LocalPlayer) then return end
     if ESPObjects[player] then return end
     
     local char = player.Character
@@ -3115,11 +3112,11 @@ local function OnCharacterAdded(player)
     end)
 end
 
-for _, player in ipairs(Players:GetPlayers()) do
+for _, player in ipairs(game:GetService("Players"):GetPlayers()) do
     OnCharacterAdded(player)
 end
 
-Players.PlayerAdded:Connect(function(player)
+game:GetService("Players").PlayerAdded:Connect(function(player)
     OnCharacterAdded(player)
     if (ESPEnabled and player.Character) then
         task.wait(0.6)
@@ -3127,11 +3124,11 @@ Players.PlayerAdded:Connect(function(player)
     end
 end)
 
-Players.PlayerRemoving:Connect(function(player)
+game:GetService("Players").PlayerRemoving:Connect(function(player)
     RemoveESP(player)
 end)
 
-RunService.RenderStepped:Connect(function()
+game:GetService("RunService").RenderStepped:Connect(function()
     if ESPEnabled then
         UpdateESP()
     end
@@ -3140,12 +3137,12 @@ end)
 Extra:AddButton("Display Health", function()
     ESPEnabled = not ESPEnabled
     if ESPEnabled then
-        for _, player in ipairs(Players:GetPlayers()) do
+        for _, player in ipairs(game:GetService("Players"):GetPlayers()) do
             if player.Character then
                 CreateESP(player)
             end
         end
-        print("[ESP] Display Health enabled (real damage = Strength/15 + pets)")
+        print("[ESP] Display Health enabled")
     else
         for player, _ in pairs(ESPObjects) do
             RemoveESP(player)
@@ -3154,18 +3151,15 @@ Extra:AddButton("Display Health", function()
     end
 end)
 
-local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local LocalPlayer = Players.LocalPlayer
-local running = false
+local packRunning = false
 
-local function getRemote()
-    local rEvents = ReplicatedStorage:FindFirstChild("rEvents")
+local function getPackRemote()
+    local rEvents = game:GetService("ReplicatedStorage"):FindFirstChild("rEvents")
     if not rEvents then return end
     return rEvents:FindFirstChild("equipPetEvent")
 end
 
-local function unequipAll(remote, petsFolder)
+local function unequipAllPacks(remote, petsFolder)
     for _, folder in pairs(petsFolder:GetChildren()) do
         if folder:IsA("Folder") then
             for _, pet in pairs(folder:GetChildren()) do
@@ -3175,7 +3169,7 @@ local function unequipAll(remote, petsFolder)
     end
 end
 
-local function getPets(folder, name)
+local function getPacksByName(folder, name)
     local t = {}
     for _, pet in pairs(folder:GetChildren()) do
         if (pet.Name == name) then
@@ -3185,12 +3179,12 @@ local function getPets(folder, name)
     return t
 end
 
-local function EquipMightyMonsters()
-    local petsFolder = LocalPlayer:FindFirstChild("petsFolder")
+local function EquipMightyMonstersPack()
+    local petsFolder = game.Players.LocalPlayer:FindFirstChild("petsFolder")
     if not petsFolder then return end
     local unique = petsFolder:FindFirstChild("Unique")
     if not unique then return end
-    local remote = getRemote()
+    local remote = getPackRemote()
     if not remote then return end
     local count = 0
     for _, pet in pairs(unique:GetChildren()) do
@@ -3203,12 +3197,12 @@ local function EquipMightyMonsters()
     end
 end
 
-local function EquipWildWizards()
-    local petsFolder = LocalPlayer:FindFirstChild("petsFolder")
+local function EquipWildWizardsPack()
+    local petsFolder = game.Players.LocalPlayer:FindFirstChild("petsFolder")
     if not petsFolder then return end
     local unique = petsFolder:FindFirstChild("Unique")
     if not unique then return end
-    local remote = getRemote()
+    local remote = getPackRemote()
     if not remote then return end
     local count = 0
     for _, pet in pairs(unique:GetChildren()) do
@@ -3222,111 +3216,73 @@ local function EquipWildWizards()
 end
 
 Extra:AddButton("Smart Pack Spam", function()
-    if running then return end
-    running = true
+    if packRunning then return end
+    packRunning = true
     task.spawn(function()
-        local petsFolder = LocalPlayer:FindFirstChild("petsFolder")
-        if not petsFolder then warn("petsFolder not found") running = false return end
+        local petsFolder = game.Players.LocalPlayer:FindFirstChild("petsFolder")
+        if not petsFolder then warn("petsFolder not found") packRunning = false return end
         local unique = petsFolder:FindFirstChild("Unique")
-        if not unique then warn("Unique folder not found") running = false return end
-        local remote = getRemote()
-        if not remote then warn("equipPetEvent not found") running = false return end
-        while running do
-            unequipAll(remote, petsFolder)
+        if not unique then warn("Unique folder not found") packRunning = false return end
+        local remote = getPackRemote()
+        if not remote then warn("equipPetEvent not found") packRunning = false return end
+        while packRunning do
+            unequipAllPacks(remote, petsFolder)
             task.wait(0.001)
-            local mighty = getPets(unique, "Mighty Monster")
+            local mighty = getPacksByName(unique, "Mighty Monster")
             for i = 1, math.min(8, #mighty) do
-                if not running then return end
+                if not packRunning then return end
                 remote:FireServer("equipPet", mighty[i])
                 task.wait(0.001)
             end
             task.wait(0.001)
-            unequipAll(remote, petsFolder)
+            unequipAllPacks(remote, petsFolder)
             task.wait(0.001)
-            local wizard = getPets(unique, "Wild Wizard")
+            local wizard = getPacksByName(unique, "Wild Wizard")
             for i = 1, math.min(8, #wizard) do
-                if not running then return end
+                if not packRunning then return end
                 remote:FireServer("equipPet", wizard[i])
                 task.wait(0.001)
             end
             task.wait(0.001)
-        end
-    end)
-end)
-
-Extra:AddButton("Stop Spaming", function()
-    running = false
-    print("[PackSpam]: Stopped")
-end)
-
-Extra:AddButton("Equip Health Packs", function()
-    local petsFolder = LocalPlayer:FindFirstChild("petsFolder")
-    if petsFolder then
-        local remote = getRemote()
-        if remote then
-            unequipAll(remote, petsFolder)
-        end
-    end
-    task.wait(0.05)
-    EquipMightyMonsters()
-end)
-
-Extra:AddButton("Equip Damage Packs", function()
-    local petsFolder = LocalPlayer:FindFirstChild("petsFolder")
-    if petsFolder then
-        local remote = getRemote()
-        if remote then
-            unequipAll(remote, petsFolder)
-        end
-    end
-    task.wait(0.05)
-    EquipWildWizards()
-end)
-
-Extra:AddButton("Start Pack Spam", function()
-    if running then return end
-    running = true
-    task.spawn(function()
-        local petsFolder = LocalPlayer:FindFirstChild("petsFolder")
-        if not petsFolder then warn("petsFolder not found") running = false return end
-        local unique = petsFolder:FindFirstChild("Unique")
-        if not unique then warn("Unique folder not found") running = false return end
-        local remote = getRemote()
-        if not remote then warn("equipPetEvent not found") running = false return end
-        while running do
-            unequipAll(remote, petsFolder)
-            task.wait(0.001)
-            local mighty = getPets(unique, "Mighty Monster")
-            for i = 1, math.min(8, #mighty) do
-                if not running then return end
-                remote:FireServer("equipPet", mighty[i])
-                task.wait(0.001)
-            end
-            task.wait(0.001)
-            unequipAll(remote, petsFolder)
-            task.wait(0)
-            local wizard = getPets(unique, "Wild Wizard")
-            for i = 1, math.min(0, #wizard) do
-                if not running then return end
-                remote:FireServer("equipPet", wizard[i])
-                task.wait(0)
-            end
-            task.wait(0)
         end
     end)
 end)
 
 Extra:AddButton("Stop Pack Spam", function()
-    running = false
+    packRunning = false
     print("[PackSpam]: Stopped")
 end)
 
+Extra:AddButton("Equip Health Packs", function()
+    local petsFolder = game.Players.LocalPlayer:FindFirstChild("petsFolder")
+    if petsFolder then
+        local remote = getPackRemote()
+        if remote then
+            unequipAllPacks(remote, petsFolder)
+        end
+    end
+    task.wait(0.05)
+    EquipMightyMonstersPack()
+end)
+
+Extra:AddButton("Equip Damage Packs", function()
+    local petsFolder = game.Players.LocalPlayer:FindFirstChild("petsFolder")
+    if petsFolder then
+        local remote = getPackRemote()
+        if remote then
+            unequipAllPacks(remote, petsFolder)
+        end
+    end
+    task.wait(0.05)
+    EquipWildWizardsPack()
+end)
+
 Extra:AddButton("Equip Wild Wizard", function()
-    local petsFolder = LocalPlayer:FindFirstChild("petsFolder")
+    local petsFolder = game.Players.LocalPlayer:FindFirstChild("petsFolder")
     if not petsFolder then return end
     local unique = petsFolder:FindFirstChild("Unique")
     if not unique then return end
-    local remote = getRemote()
+    local remote = getPackRemote()
     if not remote then return end
     for _, folder in pairs(petsFolder:GetChildren()) do
         if folder:IsA("Folder") then
@@ -3349,11 +3305,11 @@ Extra:AddButton("Equip Wild Wizard", function()
 end)
 
 Extra:AddButton("Equip Mighty Monster", function()
-    local petsFolder = LocalPlayer:FindFirstChild("petsFolder")
+    local petsFolder = game.Players.LocalPlayer:FindFirstChild("petsFolder")
     if not petsFolder then return end
     local unique = petsFolder:FindFirstChild("Unique")
     if not unique then return end
-    local remote = getRemote()
+    local remote = getPackRemote()
     if not remote then return end
     for _, folder in pairs(petsFolder:GetChildren()) do
         if folder:IsA("Folder") then
