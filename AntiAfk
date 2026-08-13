@@ -1,0 +1,122 @@
+local Players = game:GetService("Players")
+local VIM = game:GetService("VirtualInputManager")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+
+local function getCharacter()
+    local char = player.Character
+    if not char then
+        player.CharacterAdded:Wait()
+        char = player.Character
+    end
+    return char
+end
+
+local function antiAFK()
+    local char = getCharacter()
+    local humanoid = char:WaitForChild("Humanoid")
+    local rootPart = char:WaitForChild("HumanoidRootPart")
+    
+    if not humanoid or not rootPart then return end
+    
+    local originalPos = rootPart.Position
+    
+    humanoid.Jump = true
+    task.wait(0.5)
+    
+    local start = os.clock()
+    local moveDuration = 5
+    
+    while os.clock() - start < moveDuration do
+        local angle = math.random() * math.pi * 2
+        local dir = Vector3.new(math.cos(angle), 0, math.sin(angle))
+        
+        local targetPos = rootPart.Position + dir * 8
+        humanoid:MoveTo(targetPos)
+        
+        if math.random() < 0.3 then
+            humanoid.Jump = true
+        end
+        
+        task.wait(1)
+    end
+    
+    humanoid:Move(Vector3.zero, false)
+    
+    task.wait(2)
+    
+    humanoid:MoveTo(originalPos)
+    task.wait(1)
+    
+    VIM:SendKeyEvent(true, Enum.KeyCode.E, false, nil)
+    task.wait(0.5)
+    VIM:SendKeyEvent(false, Enum.KeyCode.E, false, nil)
+end
+
+local function antiAFKWithKeys()
+    local keys = {"W", "A", "S", "D"}
+    local numKeys = math.random(2, 3)
+    local chosenKeys = {}
+    
+    for i = 1, numKeys do
+        local randomKey = keys[math.random(#keys)]
+        table.insert(chosenKeys, randomKey)
+    end
+    
+    for _, key in ipairs(chosenKeys) do
+        VIM:SendKeyEvent(true, Enum.KeyCode[key], false, nil)
+    end
+    
+    VIM:SendKeyEvent(true, Enum.KeyCode.Space, false, nil)
+    task.wait(2)
+    
+    for _, key in ipairs(chosenKeys) do
+        VIM:SendKeyEvent(false, Enum.KeyCode[key], false, nil)
+    end
+    VIM:SendKeyEvent(false, Enum.KeyCode.Space, false, nil)
+end
+
+local function antiAFKCamera()
+    local camera = workspace.CurrentCamera
+    if not camera then return end
+    
+    local original = camera.CFrame
+    local start = os.clock()
+    local duration = 5
+    
+    while os.clock() - start < duration do
+        local progress = (os.clock() - start) / duration
+        local angle = math.sin(progress * math.pi * 2) * math.rad(45)
+        
+        camera.CFrame = original * CFrame.Angles(0, angle, 0)
+        task.wait()
+    end
+    
+    camera.CFrame = original
+end
+
+local function fullAntiAFK()
+    print("Executando Anti-AFK...")
+    
+    task.spawn(antiAFK)
+    task.spawn(antiAFKWithKeys)
+    task.spawn(antiAFKCamera)
+    
+    task.wait(8)
+    print("Anti-AFK completado!")
+end
+
+local interval = 12 * 60
+
+print("Script Anti-AFK iniciado!")
+print("Ciclo: a cada 12 minutos")
+print("Duração do AFK: ~8 segundos")
+
+while true do
+    task.wait(interval)
+    
+    if player and player.Parent then
+        fullAntiAFK()
+    end
+end
