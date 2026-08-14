@@ -1,6 +1,6 @@
-local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/0o0o0o0o0o0o0o0o0o0o0o0o/0o/refs/heads/main/CRUSHER.lua", true))() 
+local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/SadOz8/Cru/refs/heads/main/Sher", true))() 
 
-local window = library:AddWindow("Crusher Private Killing â KTA ON TOP ", {
+local window = library:AddWindow("Crusher Private Killing    ZTX ON TOP ", {
     main_color = Color3.fromRGB(0, 0, 0),
     min_size = Vector2.new(500, 750),
     can_resize = false,
@@ -2328,8 +2328,8 @@ task.spawn(function()
 end)
 
 SpecsTab:AddLabel("Version 1.1.1")
-SpecsTab:AddLabel("Thank you for using the script!")
-SpecsTab:AddLabel("Made by xXDEATHKINGXx")
+SpecsTab:AddLabel("Thank you for using the script! ZTX ON TOP")
+SpecsTab:AddLabel("Made by xXDEATHKINGXx Cracked By ZTX")
 SpecsTab:AddLabel("I hope you like the script, for bugs or suggestions on my discord server")
 SpecsTab:AddLabel("Discord Server:")
 SpecsTab:AddButton("Copy Link", function()
