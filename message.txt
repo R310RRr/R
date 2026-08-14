@@ -55,7 +55,7 @@ local AuthorizedUsers = {
     "phol_268t",
     "alexander_346g",
     "Juakolilu",
-    "Oulordyao",
+    "sadnii4",
     "Hannahz458",
     "",
 }
