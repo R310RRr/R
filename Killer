@@ -3443,3 +3443,315 @@ Extra:AddButton("Equip Mighty Monster", function()
         task.wait(0.1)
     end
 end)
+
+local nothingLabel = Extra:AddLabel("____________________________________________________")
+nothingLabel.TextSize = 18
+
+local LoopKillLabel = Extra:AddLabel("Loop Kill System")
+LoopKillLabel.TextSize = 25
+
+local LoopKillAllActive = false
+local FastLoopKillAllV2Active = false
+local LoopKilling = false
+local TargetInput = ""
+
+local function isWhitelisted(targetPlayer)
+    return playerWhitelist[targetPlayer.Name] == true
+end
+
+local function GetPlayerByInput(input)
+    if not input or input == "" then return nil end
+    for _, p in ipairs(game.Players:GetPlayers()) do
+        if p.DisplayName == input or p.Name == input then
+            return p
+        end
+    end
+    return nil
+end
+
+local loopWhitelistDropdownItems = {}
+local loopWhitelist = {}
+
+local loopWhitelistDropdown = Extra:AddDropdown("Loop Kill Whitelist", function(displayName)
+    local playerName
+    if displayName:find(" | ") then
+        playerName = displayName:match(" | (.+)")
+    else
+        playerName = displayName
+    end
+    
+    local target = game.Players:FindFirstChild(playerName)
+    if target and target ~= LocalPlayer then
+        loopWhitelist[target.Name] = true
+        loopWhitelistDropdown:Set("")
+        updateLoopWhitelistLabel()
+        loopWhitelistDropdownItems[target.Name] = nil
+        rebuildLoopWhitelistDropdown()
+    end
+end)
+
+local function rebuildLoopWhitelistDropdown()
+    for playerName, displayText in pairs(loopWhitelistDropdownItems) do
+        loopWhitelistDropdown:Remove(displayText)
+    end
+    loopWhitelistDropdownItems = {}
+    
+    for _, player in ipairs(game.Players:GetPlayers()) do
+        if player ~= LocalPlayer and not loopWhitelist[player.Name] then
+            local displayText = getPlayerDropdownText(player)
+            loopWhitelistDropdown:Add(displayText)
+            loopWhitelistDropdownItems[player.Name] = displayText
+        end
+    end
+end
+
+game.Players.PlayerAdded:Connect(function(player)
+    if player ~= LocalPlayer then
+        task.wait(0.5)
+        rebuildLoopWhitelistDropdown()
+    end
+end)
+
+game.Players.PlayerRemoving:Connect(function(player)
+    if player ~= LocalPlayer then
+        loopWhitelistDropdownItems[player.Name] = nil
+        rebuildLoopWhitelistDropdown()
+    end
+end)
+
+rebuildLoopWhitelistDropdown()
+
+local loopWhitelistLabel = Extra:AddLabel("Loop Whitelist: None")
+loopWhitelistLabel.TextSize = 20
+loopWhitelistLabel.TextColor3 = Color3.fromRGB(0, 255, 200)
+
+local function updateLoopWhitelistLabel()
+    local names = {}
+    for name, _ in pairs(loopWhitelist) do
+        table.insert(names, name)
+    end
+    if #names == 0 then
+        loopWhitelistLabel.Text = "Loop Whitelist: None"
+    else
+        local text = ""
+        for i, name in ipairs(names) do
+            if i > 5 then
+                text = text .. "..."
+                break
+            end
+            if i > 1 then text = text .. ", " end
+            text = text .. name
+        end
+        loopWhitelistLabel.Text = "Loop Whitelist: " .. text
+    end
+end
+
+Extra:AddButton("Clear Loop Whitelist", function()
+    loopWhitelist = {}
+    updateLoopWhitelistLabel()
+end)
+
+task.spawn(function()
+    while true do
+        updateLoopWhitelistLabel()
+        task.wait(0.3)
+    end
+end)
+
+local singleTargetDropdown = Extra:AddDropdown("Target Player", function(text)
+    TargetInput = text
+end)
+
+local function RefreshSingleTargetDropdown()
+    singleTargetDropdown:Clear()
+    for _, p in ipairs(game.Players:GetPlayers()) do
+        if p ~= LocalPlayer then
+            singleTargetDropdown:Add(p.DisplayName)
+        end
+    end
+end
+
+RefreshSingleTargetDropdown()
+
+game.Players.PlayerAdded:Connect(function(p)
+    task.wait(0.5)
+    if p ~= LocalPlayer then
+        singleTargetDropdown:Add(p.DisplayName)
+    end
+end)
+
+game.Players.PlayerRemoving:Connect(function(p)
+    task.wait(0.5)
+    RefreshSingleTargetDropdown()
+end)
+
+local targetDisplayLabel = Extra:AddLabel("Current Target: None")
+targetDisplayLabel.TextSize = 18
+targetDisplayLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
+
+task.spawn(function()
+    while true do
+        if TargetInput and TargetInput ~= "" then
+            targetDisplayLabel.Text = "Current Target: " .. TargetInput
+        else
+            targetDisplayLabel.Text = "Current Target: None"
+        end
+        task.wait(0.5)
+    end
+end)
+
+Extra:AddSwitch("TP Kill Target", function(state)
+    LoopKilling = state
+    if LoopKilling then
+        task.spawn(function()
+            while LoopKilling do
+                local target = GetPlayerByInput(TargetInput)
+                
+                if target and loopWhitelist[target.Name] then
+                    target = nil
+                end
+                
+                if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") and 
+                    LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                    
+                    LocalPlayer.Character.HumanoidRootPart.CFrame = target.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
+                    
+                    local tool = LocalPlayer.Character:FindFirstChild("Punch")
+                    if not tool then
+                        local backpackTool = LocalPlayer:FindFirstChild("Backpack") and LocalPlayer.Backpack:FindFirstChild("Punch")
+                        if backpackTool then
+                            LocalPlayer.Character.Humanoid:EquipTool(backpackTool)
+                            tool = backpackTool
+                        end
+                    end
+                    
+                    if tool then
+                        tool:Activate() 
+                    end
+                end
+                task.wait(0.01) 
+            end
+        end)
+    end
+end)
+
+Extra:AddSwitch("Loop TP Auto Kill All", function(Value)
+    LoopKillAllActive = Value
+    if Value then
+        task.spawn(function()
+            local ReplicatedStorage = game:GetService("ReplicatedStorage")
+            
+            while LoopKillAllActive do
+                local myChar = LocalPlayer.Character
+                local myRoot = myChar and myChar:FindFirstChild("HumanoidRootPart")
+                local myHumanoid = myChar and myChar:FindFirstChildOfClass("Humanoid")
+
+                if myChar and myRoot and myHumanoid then
+                    local targetList = game.Players:GetPlayers()
+                    
+                    for _, targetPlayer in ipairs(targetList) do
+                        if not LoopKillAllActive then break end
+                        
+                        if targetPlayer ~= LocalPlayer and targetPlayer.Character and not loopWhitelist[targetPlayer.Name] then
+                            local tRoot = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+                            local timeSpent = 0
+                            
+                            while LoopKillAllActive and tRoot and targetPlayer.Parent == game.Players and timeSpent < 0.5 do
+                                myChar = LocalPlayer.Character
+                                myRoot = myChar and myChar:FindFirstChild("HumanoidRootPart")
+                                myHumanoid = myChar and myChar:FindFirstChildOfClass("Humanoid")
+                                
+                                if not (myChar and myRoot and myHumanoid) then break end
+                                
+                                myRoot.CFrame = tRoot.CFrame * CFrame.new(0, 0, 3)
+                                
+                                local tool = myChar:FindFirstChild("Punch")
+                                if not tool then
+                                    local backpack = LocalPlayer:FindFirstChild("Backpack")
+                                    local bpTool = backpack and backpack:FindFirstChild("Punch")
+                                    if bpTool then
+                                        myHumanoid:EquipTool(bpTool)
+                                        tool = bpTool
+                                    end
+                                end
+                                
+                                if tool then
+                                    tool:Activate()
+                                end
+                                
+                                local remotes = ReplicatedStorage:FindFirstChild("RemotesEvent")
+                                if remotes and remotes:FindFirstChild("SizeChanged") then
+                                    remotes.SizeChanged:FireServer(1)
+                                end
+                                
+                                task.wait(0.05)
+                                timeSpent = timeSpent + 0.05 
+                            end
+                        end
+                    end
+                end
+                task.wait(0.1) 
+            end
+        end)
+    end
+end)
+
+Extra:AddSwitch("Loop TP Auto Kill All V2", function(Value)
+    FastLoopKillAllV2Active = Value
+    if Value then
+        task.spawn(function()
+            local ReplicatedStorage = game:GetService("ReplicatedStorage")
+            
+            while FastLoopKillAllV2Active do
+                local myChar = LocalPlayer.Character
+                local myRoot = myChar and myChar:FindFirstChild("HumanoidRootPart")
+                local myHumanoid = myChar and myChar:FindFirstChildOfClass("Humanoid")
+
+                if myChar and myRoot and myHumanoid then
+                    local targetList = game.Players:GetPlayers()
+                    
+                    for _, targetPlayer in ipairs(targetList) do
+                        if not FastLoopKillAllV2Active then break end
+                        
+                        if targetPlayer ~= LocalPlayer and targetPlayer.Character and not loopWhitelist[targetPlayer.Name] then
+                            local tRoot = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+                            local tHumanoid = targetPlayer.Character:FindFirstChild("Humanoid")
+                            
+                            if tRoot and tHumanoid and tHumanoid.Health > 0 then
+                                for _ = 1, 3 do
+                                    if not FastLoopKillAllV2Active or tHumanoid.Health <= 0 then break end
+                                    
+                                    myRoot.CFrame = tRoot.CFrame * CFrame.new(0, 0, 3)
+                                    
+                                    local tool = myChar:FindFirstChild("Punch")
+                                    if not tool then
+                                        local backpack = LocalPlayer:FindFirstChild("Backpack")
+                                        local bpTool = backpack and backpack:FindFirstChild("Punch")
+                                        if bpTool then
+                                            myHumanoid:EquipTool(bpTool)
+                                            tool = bpTool
+                                        end
+                                    end
+                                    
+                                    if tool then
+                                        tool:Activate()
+                                    end
+                                    
+                                    local remotes = ReplicatedStorage:FindFirstChild("RemotesEvent")
+                                    if remotes and remotes:FindFirstChild("SizeChanged") then
+                                        pcall(function()
+                                            remotes.SizeChanged:FireServer(1)
+                                        end)
+                                    end
+                                    
+                                    task.wait(0.1)
+                                end
+                            end
+                        end
+                    end
+                end
+                task.wait()
+            end
+        end)
+    end
+end)
