@@ -3444,8 +3444,8 @@ Extra:AddButton("Equip Mighty Monster", function()
     end
 end)
 
-local nothingLabel = Extra:AddLabel("____________________________________________________")
-nothingLabel.TextSize = 18
+local TpLabel = Extra:AddLabel("____________________________________________________")
+TpLabel.TextSize = 18
 
 local TpLabel = Extra:AddLabel("Teleport")
 TpLabel.TextSize = 25
