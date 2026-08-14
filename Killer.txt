@@ -3464,35 +3464,51 @@ local islands = {
 
 local AutoRandomTP = false
 local LastIsland = 0
+local RandomTPThread = nil
 
 Extra:AddButton("Start Auto Random Teleport", function()
     AutoRandomTP = not AutoRandomTP
-
+    
     if AutoRandomTP then
-        task.spawn(function()
-            while AutoRandomTP do
-                local char = player.Character
-                if char then
-                    local hrp = char:FindFirstChild("HumanoidRootPart")
-
-                    if hrp then
-                        local newIndex = math.random(1, #islands)
-
-                        repeat
-                            newIndex = math.random(1, #islands)
-                        until newIndex ~= LastIsland
-
-                        LastIsland = newIndex
-                        hrp.CFrame = islands[newIndex]
-                    end
+        if RandomTPThread then
+            RandomTPThread:Disconnect()
+            RandomTPThread = nil
+        end
+        
+        RandomTPThread = game:GetService("RunService").Heartbeat:Connect(function()
+            if not AutoRandomTP then
+                RandomTPThread:Disconnect()
+                RandomTPThread = nil
+                return
+            end
+            
+            local char = game.Players.LocalPlayer.Character
+            if char then
+                local hrp = char:FindFirstChild("HumanoidRootPart")
+                if hrp then
+                    local newIndex = math.random(1, #islands)
+                    
+                    repeat
+                        newIndex = math.random(1, #islands)
+                    until newIndex ~= LastIsland or #islands == 1
+                    
+                    LastIsland = newIndex
+                    hrp.CFrame = islands[newIndex]
                 end
-
-                task.wait(0.01)
             end
         end)
+    else
+        if RandomTPThread then
+            RandomTPThread:Disconnect()
+            RandomTPThread = nil
+        end
     end
 end)
 
 Extra:AddButton("Stop Auto Random Teleport", function()
     AutoRandomTP = false
+    if RandomTPThread then
+        RandomTPThread:Disconnect()
+        RandomTPThread = nil
+    end
 end)
