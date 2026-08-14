@@ -14,9 +14,9 @@ if not displayName or displayName == "" then
 end
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
-local title = ("Genesis Hub| Hello %s"):format(displayName)
+local title = ("Genesis Hub Cracked By ZTX| Hello %s"):format(displayName)
 
-local library = loadstring(game:HttpGet("https://gist.githubusercontent.com/ISPPs54/b5a07e1db87e709d70d91af44a3410b4/raw/56657312e62b2091b130b2a760cec56a8ba22f99/gistfile1.txt", true))()
+local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/SadOz8/Ge/refs/heads/main/Nes", true))()
 
 local window = library:AddWindow(title, {
     main_color = Color3.fromRGB(0, 0, 0),
