@@ -3443,3 +3443,56 @@ Extra:AddButton("Equip Mighty Monster", function()
         task.wait(0.1)
     end
 end)
+
+local nothingLabel = Extra:AddLabel("____________________________________________________")
+nothingLabel.TextSize = 18
+
+local TpLabel = Extra:AddLabel("Teleport")
+TpLabel.TextSize = 25
+
+local islands = {
+    CFrame.new(-37.1, 9.2, 1919),
+    CFrame.new(16.07, 9.08, 133.8),
+    CFrame.new(-8, 9, -169.2),
+    CFrame.new(-8665.4, 17.21, -5792.9),
+    CFrame.new(-8543, 6.8, 2400),
+    CFrame.new(4516, 991.5, -3856),
+    CFrame.new(-6759, 7.36, -1284),
+    CFrame.new(2250, 7.37, 1073.2),
+    CFrame.new(-2623, 7.36, -409)
+}
+
+local AutoRandomTP = false
+local LastIsland = 0
+
+Extra:AddButton("Start Auto Random Teleport", function()
+    AutoRandomTP = not AutoRandomTP
+
+    if AutoRandomTP then
+        task.spawn(function()
+            while AutoRandomTP do
+                local char = player.Character
+                if char then
+                    local hrp = char:FindFirstChild("HumanoidRootPart")
+
+                    if hrp then
+                        local newIndex = math.random(1, #islands)
+
+                        repeat
+                            newIndex = math.random(1, #islands)
+                        until newIndex ~= LastIsland
+
+                        LastIsland = newIndex
+                        hrp.CFrame = islands[newIndex]
+                    end
+                end
+
+                task.wait(0.01)
+            end
+        end)
+    end
+end)
+
+Extra:AddButton("Stop Auto Random Teleport", function()
+    AutoRandomTP = false
+end)
