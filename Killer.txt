@@ -2549,8 +2549,6 @@ local Extra = window:AddTab("Extra Killing")
 local targetssLabel = Extra:AddLabel("Kill Targets")
 targetssLabel.TextSize = 26
 
-local targetPlayerNames = {}
-
 Extra:AddTextBox("Player Name", function(text)
     if text and text ~= "" then
         local found = false
