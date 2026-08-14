@@ -3469,6 +3469,15 @@ local function GetPlayerByInput(input)
     return nil
 end
 
+local function getLoopDropdownText(player)
+    local cleanDisplayName = player.DisplayName:gsub("%s+", " "):gsub("^%s+", ""):gsub("%s+$", "")
+    if cleanDisplayName == "" or cleanDisplayName == player.Name then
+        return player.Name
+    else
+        return cleanDisplayName .. " | " .. player.Name
+    end
+end
+
 local loopWhitelistDropdownItems = {}
 local loopWhitelist = {}
 
@@ -3498,7 +3507,7 @@ local function rebuildLoopWhitelistDropdown()
     
     for _, player in ipairs(game.Players:GetPlayers()) do
         if player ~= LocalPlayer and not loopWhitelist[player.Name] then
-            local displayText = getPlayerDropdownText(player)
+            local displayText = getLoopDropdownText(player)
             loopWhitelistDropdown:Add(displayText)
             loopWhitelistDropdownItems[player.Name] = displayText
         end
