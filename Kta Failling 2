@@ -1,0 +1,347 @@
+local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/iyoulin/iyoulin/refs/heads/main/ato"))()
+
+print("反挂机已开启")
+local Start = tick()
+
+local VirtualUser = game:GetService("VirtualUser")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+LocalPlayer.Idled:Connect(function()
+    VirtualUser:Button2Down(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
+    wait(1)
+    VirtualUser:Button2Up(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
+end)
+
+local function formatNumber(num, decimals)
+    return string.format("%." .. decimals .. "f", num)
+end
+
+local suffixes = {"", "K", "M", "B", "T", "Qa", "Qi"}
+
+local function abbreviateNumber(num)
+    if num == nil then
+        return "0"
+    end
+    
+    local absNum = math.abs(num)
+    if absNum < 1000 then
+        return formatNumber(num, 2)
+    end
+    
+    local tier = math.floor(math.log10(absNum) / 3)
+    return formatNumber(num / 1000^tier, 2) .. (suffixes[tier + 1] or "e" .. tier * 3)
+end
+
+local function hasProteinBuff()
+    pcall(function()
+        local boostTimersFolder = LocalPlayer.boostTimersFolder
+        return boostTimersFolder:FindFirstChild("Protein Egg") ~= nil
+    end)
+    
+    return LocalPlayer.boostTimersFolder and LocalPlayer.boostTimersFolder:FindFirstChild("Protein Egg") ~= nil
+end
+
+_G.auto_protein_egg = false
+
+local function autoProteinEgg()
+    while _G.auto_protein_egg do
+        pcall(function()
+            if hasProteinBuff() then
+                return
+            end
+            
+            local egg = LocalPlayer.Backpack:FindFirstChild("Protein Egg")
+            if egg then
+                local character = LocalPlayer.Character
+                if character then
+                    local humanoid = character:FindFirstChild("Humanoid")
+                    if humanoid then
+                        humanoid:EquipTool(egg)
+                        task.wait(0.2)
+                        
+                        local equippedEgg = character:FindFirstChild("Protein Egg")
+                        if equippedEgg then
+                            local muscleEvent = LocalPlayer.muscleEvent
+                            muscleEvent:FireServer("proteinEgg", equippedEgg)
+                            task.wait(0.2)
+                            humanoid:UnequipTools()
+                        else
+                            humanoid:UnequipTools()
+                        end
+                    end
+                end
+            end
+        end)
+        task.wait(1)
+    end
+end
+
+local Window = WindUI:CreateWindow({
+    Title = "LYH",
+    Icon = "rbxassetid://139743288604595",
+    Author = "2903144038",
+    Folder = "LYH",
+    Size = UDim2.fromOffset(185, 235),
+    Transparent = false,
+    Theme = "Dark",
+    SideBarWidth = 95,
+    HasOutline = false
+})
+
+Window:EditOpenButton({
+    Title = "打开",
+    Icon = "refresh-cw",
+    CornerRadius = UDim.new(0, 10),
+    StrokeThickness = 0,
+    Color = ColorSequence.new(Color3.fromHex("F89B29"), Color3.fromHex("FF0F7B"))
+})
+
+local Tab = Window:Tab({
+    Title = "重生",
+    Icon = ""
+})
+
+local statsParagraph = Tab:Paragraph({
+    Title = "数据",
+    Desc = "等待加载...",
+    Image = "",
+    ImageSize = 25
+})
+
+if LocalPlayer.leaderstats then
+    local initialRebirths = LocalPlayer.leaderstats.Rebirths.Value
+    local totalGained = 0
+    local lastGain = 0
+    local lastTime = nil
+    local totalInterval = 0
+    local totalAmount = 0
+    local totalCount = 0
+    local windowSize = 60
+    local records = {}
+    
+    LocalPlayer.leaderstats.Rebirths:GetPropertyChangedSignal("Value"):Connect(function()
+        local gained = LocalPlayer.leaderstats.Rebirths.Value - (initialRebirths + totalGained)
+        if gained > 0 then
+            totalGained = totalGained + gained
+            local currentTime = os.clock()
+            if lastTime then
+                local interval = currentTime - lastTime
+                if interval > 0.5 and interval < 600 then
+                    table.insert(records, {
+                        interval = interval,
+                        amount = gained,
+                        time = os.time()
+                    })
+                    totalInterval = totalInterval + interval
+                    totalAmount = totalAmount + gained
+                    totalCount = totalCount + 1
+                end
+            end
+            lastTime = currentTime
+            lastGain = gained
+            
+            for i = #records, 1, -1 do
+                if os.clock() - records[i].time > windowSize then
+                    local removed = table.remove(records, i)
+                    if removed then
+                        totalInterval = totalInterval - removed.interval
+                        totalAmount = totalAmount - removed.amount
+                        totalCount = totalCount - 1
+                    end
+                end
+            end
+        end
+    end)
+    
+    task.spawn(function()
+        while true do
+            task.wait(1.2)
+            pcall(function()
+                local rebirths = LocalPlayer.leaderstats.Rebirths.Value
+                local avgInterval = totalCount > 0 and totalInterval / totalCount or 0
+                local avgAmount = totalCount > 0 and totalAmount / totalCount or 0
+                local perHour = avgInterval > 0 and (3600 / avgInterval) * avgAmount or 0
+                
+                local intervalText = totalCount > 0 and formatNumber(avgInterval, 1) .. "s" or "等待数据"
+                local perHourText = perHour > 0 and abbreviateNumber(perHour) or "等待数据"
+                
+                statsParagraph:SetDesc(
+                    "总重生: " .. abbreviateNumber(rebirths) .. "\n" ..
+                    "已获得: " .. abbreviateNumber(totalGained) .. "\n" ..
+                    "重生/时: " .. perHourText .. "\n" ..
+                    "重生/天: " .. abbreviateNumber(perHour * 24)
+                )
+            end)
+        end
+    end)
+else
+    statsParagraph:SetDesc("数据加载失败，请重新运行脚本")
+end
+
+Tab:Button({
+    Title = "防卡顿",
+    Callback = function()
+        extremeFPS()
+    end
+})
+
+_G.auto_all = false
+_G.auto_spin = true
+
+local function getStrengthThreshold()
+    return 1000 + 5000 * game.Players.LocalPlayer.leaderstats.Rebirths.Value / 2
+end
+
+local function autoAll()
+    while _G.auto_all do
+        pcall(function()
+            local threshold = getStrengthThreshold()
+            local currentStrength = game.Players.LocalPlayer.leaderstats.Strength.Value
+            local equippedPet = tostring(game.Players.LocalPlayer.equippedPets.pet1.Value)
+            
+            local petsFolder = game.Players.LocalPlayer.petsFolder
+            local pets = petsFolder:GetChildren()
+            
+            for _, pet in ipairs(pets) do
+                local petName = pet.Name
+                local petType = tostring(game.Players.LocalPlayer.equippedPets.pet1.Value)
+                
+                if currentStrength < threshold and petType == "Tribal Overlord" and petName == "Swift Samurai" then
+                    local equipPetEvent = game:GetService("ReplicatedStorage").rEvents.equipPetEvent
+                    equipPetEvent:FireServer("unequipPet", pet)
+                    equipPetEvent:FireServer("equipPet", pet)
+                elseif currentStrength >= threshold and petType == "Swift Samurai" and petName == "Tribal Overlord" then
+                    local equipPetEvent = game:GetService("ReplicatedStorage").rEvents.equipPetEvent
+                    equipPetEvent:FireServer("unequipPet", pet)
+                    equipPetEvent:FireServer("equipPet", pet)
+                end
+            end
+            
+            local currentPet = tostring(game.Players.LocalPlayer.equippedPets.pet1.Value)
+            
+            if currentPet == "Swift Samurai" then
+                for i = 1, 15 do
+                    local muscleEvent = game:GetService("Players").LocalPlayer.muscleEvent
+                    muscleEvent:FireServer("rep")
+                end
+            end
+            
+            if currentPet == "Tribal Overlord" then
+                local rebirthRemote = game:GetService("ReplicatedStorage").rEvents.rebirthRemote
+                rebirthRemote:InvokeServer("rebirthRequest")
+            end
+        end)
+        wait()
+    end
+end
+
+Tab:Toggle({
+    Title = "快速重生",
+    Value = false,
+    Callback = function(value)
+        _G.auto_all = value
+        if value then
+            autoAll()
+        end
+    end
+})
+
+Tab:Toggle({
+    Title = "自动吃蛋",
+    Value = false,
+    Callback = function(value)
+        _G.auto_protein_egg = value
+        if value then
+            autoProteinEgg()
+        end
+    end
+})
+
+local function autoSpin()
+    while _G.auto_spin do
+        wait(0.5)
+        pcall(function()
+            local fortuneWheelChances = game:GetService("ReplicatedStorage").fortuneWheelChances
+            local openFortuneWheelRemote = game:GetService("ReplicatedStorage").rEvents.openFortuneWheelRemote
+            openFortuneWheelRemote:InvokeServer(unpack({
+                "openFortuneWheel",
+                fortuneWheelChances:FindFirstChild("Fortune Wheel")
+            }))
+        end)
+    end
+end
+
+Tab:Toggle({
+    Title = "自动转盘",
+    Value = false,
+    Callback = function(value)
+        _G.auto_spin = value
+        if value then
+            autoSpin()
+        end
+    end
+})
+
+function extremeFPS()
+    pcall(function()
+        local Lighting = game:GetService("Lighting")
+        local Players = game:GetService("Players")
+        local LocalPlayer = Players.LocalPlayer
+        
+        settings().Rendering.QualityLevel = 0
+        settings().Physics.PhysicsEnvironmentalThrottle = 3
+        
+        Lighting.Brightness = 0
+        Lighting.Ambient = Color3.new(0, 0, 0)
+        Lighting.OutdoorAmbient = Color3.new(0, 0, 0)
+        Lighting.GlobalShadows = false
+        Lighting.ClockTime = 0
+        Lighting.FogEnd = 30
+        Lighting.FogStart = 0
+        
+        for _, child in ipairs(Lighting:GetChildren()) do
+            pcall(function()
+                child:Destroy()
+            end)
+        end
+        
+        for _, descendant in ipairs(workspace:GetDescendants()) do
+            if descendant:IsA("BasePart") then
+                descendant.Transparency = 1
+                descendant.CanCollide = false
+                descendant.CastShadow = false
+            else
+                pcall(function()
+                    if descendant.Name ~= LocalPlayer.Name then
+                        descendant:Destroy()
+                    end
+                end)
+            end
+        end
+        
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character then
+                pcall(function()
+                    player.Character:Destroy()
+                end)
+            end
+        end
+        
+        if LocalPlayer.PlayerGui then
+            for _, descendant in ipairs(LocalPlayer.PlayerGui:GetDescendants()) do
+                pcall(function()
+                    descendant:Destroy()
+                end)
+            end
+        end
+        
+        if LocalPlayer.Character then
+            for _, descendant in ipairs(LocalPlayer.Character:GetDescendants()) do
+                if descendant:IsA("BasePart") then
+                    descendant.Transparency = 1
+                end
+            end
+        end
+    end)
+end
