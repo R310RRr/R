@@ -1,4 +1,3 @@
-```lua
 local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Nov23Y/Nov23Y/refs/heads/main/windui"))()
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
