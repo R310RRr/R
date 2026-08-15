@@ -1,4 +1,3 @@
-```lua
 local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/R310RRr/U/refs/heads/main/II"))()
 
 WindUI.TransparencyValue = 0.2
@@ -3513,4 +3512,3 @@ WindUI:Notify({
     Content = "R310RRrr | PRIVATE KILLER",
     Duration = 3
 })
-```
