@@ -1,0 +1,470 @@
+local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Nov23Y/Nov23Y/refs/heads/main/windui"))()
+
+local VirtualUser = game:GetService("VirtualUser")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Lighting = game:GetService("Lighting")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+LocalPlayer.Idled:Connect(function()
+    VirtualUser:Button2Down(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
+    task.wait(1)
+    VirtualUser:Button2Up(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
+end)
+
+local foodList = {
+    "蛋白质棒",
+    "能量棒",
+    "健壮条",
+    "蛋白质奶昔",
+    "超级奶昔",
+    "能量奶昔",
+    "菠萝"
+}
+
+local foodData = {
+    ["蛋白质棒"] = { toolName = "Protein Bar" },
+    ["能量棒"] = { toolName = "Energy Bar" },
+    ["健壮条"] = { toolName = "TOUGH Bar" },
+    ["蛋白质奶昔"] = { toolName = "Protein Shake" },
+    ["超级奶昔"] = { toolName = "ULTRA Shake" },
+    ["能量奶昔"] = { toolName = "Energy Shake" },
+    ["菠萝"] = { toolName = "Tropical Shake" }
+}
+
+local currentFoodIndex = 1
+
+local function getAvailableFoods()
+    local backpack = LocalPlayer.Backpack
+    local available = {}
+    
+    for _, foodName in ipairs(foodList) do
+        if backpack:FindFirstChild(foodData[foodName].toolName) then
+            table.insert(available, foodName)
+        end
+    end
+    
+    return available
+end
+
+local function equipFood(food)
+    if not food then
+        return false
+    end
+    
+    local character = LocalPlayer.Character
+    if not character or not character:FindFirstChild("HumanoidRootPart") then
+        return false
+    end
+    
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if not humanoid then
+        return false
+    end
+    
+    local currentTool = character:FindFirstChildOfClass("Tool")
+    if currentTool and currentTool.Name == food.toolName then
+        return true
+    end
+    
+    local backpack = LocalPlayer.Backpack
+    local tool = backpack:FindFirstChild(food.toolName)
+    
+    if tool then
+        for _, child in ipairs(character:GetChildren()) do
+            if child:IsA("Tool") then
+                humanoid:UnequipTools()
+            end
+        end
+        
+        task.wait(0.1)
+        humanoid:EquipTool(tool)
+        task.wait(0.2)
+        
+        local equippedTool = character:FindFirstChildOfClass("Tool")
+        if equippedTool and equippedTool.Name == food.toolName then
+            return true
+        end
+    end
+    
+    return false
+end
+
+local function checkFoodStillExists(food)
+    local backpack = LocalPlayer.Backpack
+    return backpack:FindFirstChild(food.toolName) ~= nil
+end
+
+local function formatNumber(num)
+    return string.format("%.2f", num)
+end
+
+local suffixes = {"", "K", "M", "B", "T", "Qa", "Qi"}
+
+local function abbreviateNumber(num)
+    if num == nil then
+        return "0"
+    end
+    
+    local absNum = math.abs(num)
+    if absNum < 1000 then
+        return formatNumber(num)
+    end
+    
+    local tier = math.floor(math.log10(absNum) / 3)
+    return formatNumber(num / 1000^tier) .. (suffixes[tier + 1] or "e" .. tier * 3)
+end
+
+local function cleanOtherUIs()
+    local suspiciousKeywords = {
+        "+", "Coin", "Strength", "Exp", "Experience", "Level", "Health"
+    }
+    
+    local suspiciousUINames = {
+        "MobileWindUI", "Crazy Top", "Rayfield", "KJY_Team_AntiDup"
+    }
+    
+    local function checkAndDestroy(parent)
+        pcall(function()
+            for _, child in ipairs(parent:GetChildren()) do
+                if child:IsA("ScreenGui") then
+                    for _, uiName in ipairs(suspiciousUINames) do
+                        if child.Name:find(uiName) then
+                            child:Destroy()
+                            break
+                        end
+                    end
+                end
+                
+                for _, descendant in ipairs(child:GetDescendants()) do
+                    if (descendant:IsA("TextLabel") or descendant:IsA("TextButton")) and descendant.Text then
+                        for _, keyword in ipairs(suspiciousKeywords) do
+                            if descendant.Text:find(keyword) then
+                                child:Destroy()
+                                break
+                            end
+                        end
+                    end
+                end
+            end
+        end)
+    end
+    
+    checkAndDestroy(game:GetService("CoreGui"))
+    
+    if LocalPlayer:FindFirstChild("PlayerGui") then
+        checkAndDestroy(LocalPlayer.PlayerGui)
+    end
+    
+    pcall(function()
+        if not _G.originalBrightness then
+            _G.originalBrightness = Lighting.Brightness
+        end
+        Lighting.Brightness = 0
+        Lighting.ClockTime = 0
+        Lighting.FogEnd = 0
+        Lighting.GlobalShadows = false
+    end)
+end
+
+_G.auto_train = false
+_G.auto_protein = false
+_G.auto_eat_shake = false
+_G.auto_spin = false
+
+local function autoSpinWheel()
+    while _G.auto_spin do
+        wait()
+        local fortuneWheelChances = ReplicatedStorage.fortuneWheelChances
+        local openFortuneWheelRemote = ReplicatedStorage.rEvents.openFortuneWheelRemote
+        openFortuneWheelRemote:InvokeServer(unpack({
+            [1] = "openFortuneWheel",
+            [2] = fortuneWheelChances:FindFirstChild("Fortune Wheel")
+        }))
+    end
+end
+
+local function hasProteinBuff()
+    local boostTimersFolder = LocalPlayer:FindFirstChild("boostTimersFolder")
+    if boostTimersFolder then
+        return boostTimersFolder:FindFirstChild("Protein Egg") ~= nil
+    end
+    return false
+end
+
+local function autoTrain()
+    while _G.auto_train do
+        pcall(function()
+            local muscleEvent = LocalPlayer.muscleEvent
+            if muscleEvent then
+                for i = 0, 19 do
+                    muscleEvent:FireServer("rep")
+                end
+            end
+        end)
+        task.wait(0.02)
+    end
+end
+
+local function autoProteinEgg()
+    while _G.auto_protein do
+        task.wait(1)
+        pcall(function()
+            if not hasProteinBuff() then
+                local egg = LocalPlayer.Backpack:FindFirstChild("Protein Egg")
+                if egg then
+                    local character = LocalPlayer.Character
+                    if character then
+                        local humanoid = character:FindFirstChild("Humanoid")
+                        if humanoid then
+                            humanoid:EquipTool(egg)
+                            task.wait(0.2)
+                            
+                            local equippedEgg = character:FindFirstChild("Protein Egg")
+                            if equippedEgg then
+                                local muscleEvent = LocalPlayer.muscleEvent
+                                muscleEvent:FireServer("proteinEgg", equippedEgg)
+                                print("Protein egg used (buff was missing)")
+                            end
+                            
+                            task.wait(0.2)
+                            humanoid:UnequipTools()
+                        end
+                    end
+                else
+                    if _G.auto_protein then
+                        print("No protein egg in backpack")
+                    end
+                end
+            else
+                if _G.auto_protein then
+                    print("Protein buff active, waiting...")
+                end
+            end
+        end)
+    end
+end
+
+local function autoEatShakes()
+    while _G.auto_eat_shake do
+        if currentFoodIndex > #foodList then
+            currentFoodIndex = 1
+            task.wait(0.5)
+        end
+        
+        local food = foodData[foodList[currentFoodIndex]]
+        
+        if checkFoodStillExists(food) then
+            if equipFood(food) then
+                task.wait(0.5)
+                VirtualUser:Button1Down(Vector2.new(10, 10), workspace.CurrentCamera.CFrame)
+                task.wait(0.05)
+                VirtualUser:Button1Up(Vector2.new(10, 10), workspace.CurrentCamera.CFrame)
+            end
+            task.wait(0.1)
+        else
+            currentFoodIndex = currentFoodIndex + 1
+            task.wait(0.2)
+        end
+    end
+end
+
+WindUI.TransparencyValue = 0.2
+WindUI:SetTheme("Dark")
+
+local Window = WindUI:CreateWindow({
+    Title = "LYH",
+    Author = "2903144038",
+    Size = UDim2.fromOffset(500, 300),
+    Theme = "Dark",
+    SideBarWidth = 220,
+    ScrollBarEnabled = true
+})
+
+Window:Tag({
+    Title = "1.0",
+    Color = Color3.fromHex("#306aff")
+})
+
+local Tab = Window:Tab({
+    Title = "农场",
+    Locked = false
+})
+
+local statsParagraph = Tab:Paragraph({
+    Title = "数据",
+    Desc = "等待数据加载..."
+})
+
+task.spawn(function()
+    local initialStrength = nil
+    local initialDurability = nil
+    local startTime = os.clock()
+    local lastStrengthGain = 0
+    local lastDurabilityGain = 0
+    local strengthPerSec = 0
+    local durabilityPerSec = 0
+    
+    while true do
+        task.wait(0.5)
+        pcall(function()
+            if LocalPlayer.leaderstats and LocalPlayer.leaderstats.Strength and LocalPlayer.Durability then
+                local strength = LocalPlayer.leaderstats.Strength.Value
+                local durability = LocalPlayer.Durability.Value
+                
+                if initialStrength == nil then
+                    initialStrength = strength
+                    initialDurability = durability
+                    startTime = os.clock()
+                end
+                
+                local strengthGain = strength - initialStrength
+                local durabilityGain = durability - initialDurability
+                local currentTime = os.clock()
+                local elapsedTime = currentTime - startTime
+                
+                if elapsedTime > 0 then
+                    strengthPerSec = (strengthGain - lastStrengthGain) / elapsedTime
+                    durabilityPerSec = (durabilityGain - lastDurabilityGain) / elapsedTime
+                end
+                
+                lastStrengthGain = strengthGain
+                lastDurabilityGain = durabilityGain
+                startTime = currentTime
+                
+                statsParagraph:SetDesc(
+                    "总力量: " .. abbreviateNumber(strength) .. "\n" ..
+                    "总耐力: " .. abbreviateNumber(durability) .. "\n" ..
+                    "已获得力量: " .. abbreviateNumber(strengthGain) .. "\n" ..
+                    "已获得耐力: " .. abbreviateNumber(durabilityGain) .. "\n" ..
+                    "力量/秒: " .. abbreviateNumber(strengthPerSec) .. "\n" ..
+                    "耐力/秒: " .. abbreviateNumber(durabilityPerSec) .. "\n" ..
+                    "力量/天: " .. abbreviateNumber(strengthPerSec * 86400) .. "\n" ..
+                    "耐力/天: " .. abbreviateNumber(durabilityPerSec * 86400)
+                )
+            end
+        end)
+    end
+end)
+
+local buffParagraph = Tab:Paragraph({
+    Title = "双倍力量蛋:",
+    Desc = "检测中..."
+})
+
+task.spawn(function()
+    while true do
+        task.wait(1)
+        pcall(function()
+            if hasProteinBuff() then
+                buffParagraph:SetDesc("✅ 已激活")
+            else
+                buffParagraph:SetDesc("❌ 未激活")
+            end
+        end)
+    end
+end)
+
+local trainThread = nil
+Tab:Toggle({
+    Title = "自动锻炼",
+    Value = false,
+    Callback = function(value)
+        _G.auto_train = value
+        if value then
+            if trainThread then
+                task.cancel(trainThread)
+            end
+            trainThread = task.spawn(autoTrain)
+            print("Auto training enabled")
+        else
+            if trainThread then
+                task.cancel(trainThread)
+                trainThread = nil
+            end
+            print("Auto training disabled")
+        end
+    end
+})
+
+local proteinThread = nil
+Tab:Toggle({
+    Title = "自动吃蛋",
+    Value = false,
+    Callback = function(value)
+        _G.auto_protein = value
+        if value then
+            if proteinThread then
+                task.cancel(proteinThread)
+            end
+            proteinThread = task.spawn(autoProteinEgg)
+            print("Auto protein egg enabled")
+        else
+            if proteinThread then
+                task.cancel(proteinThread)
+                proteinThread = nil
+            end
+            print("Auto protein egg disabled")
+        end
+    end
+})
+
+Tab:Button({
+    Title = "防卡顿",
+    Callback = function()
+        cleanOtherUIs()
+        WindUI:Notify({
+            Title = "已启动",
+            Content = "",
+            Duration = 2
+        })
+    end
+})
+
+local shakeThread = nil
+Tab:Toggle({
+    Title = "自动吃完背包奶昔",
+    Value = false,
+    Callback = function(value)
+        _G.auto_eat_shake = value
+        if value then
+            currentFoodIndex = 1
+            if shakeThread then
+                task.cancel(shakeThread)
+            end
+            shakeThread = task.spawn(autoEatShakes)
+        else
+            if shakeThread then
+                task.cancel(shakeThread)
+                shakeThread = nil
+            end
+        end
+    end
+})
+
+local spinThread = nil
+Tab:Toggle({
+    Title = "自动转盘",
+    Value = false,
+    Callback = function(value)
+        _G.auto_spin = value
+        if value then
+            if spinThread then
+                task.cancel(spinThread)
+            end
+            spinThread = task.spawn(autoSpinWheel)
+        else
+            if spinThread then
+                task.cancel(spinThread)
+                spinThread = nil
+            end
+        end
+    end
+})
+
+task.wait(0.5)
+WindUI:Notify({
+    Title = "脚本加载完成",
+    Content = "",
+    Duration = 2
+})
