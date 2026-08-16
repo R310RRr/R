@@ -2383,6 +2383,64 @@ tabgodmode:AddSwitch("Inf Jump", function(state)
     infJumpEnabled = state
 end)
 
+local lockRunning = false
+local lockConnection
+
+local lockSwitch = tabgodmode:AddSwitch("Lock Position", function(Value)
+    local player = game.Players.LocalPlayer
+
+    if Value then
+        lockRunning = true
+        lockConnection = game:GetService("RunService").Heartbeat:Connect(function()
+            local char = player.Character
+            if not char or not char:FindFirstChild("HumanoidRootPart") or not char:FindFirstChildOfClass("Humanoid") then return end
+
+            local hrp = char.HumanoidRootPart
+            local humanoid = char:FindFirstChildOfClass("Humanoid")
+
+            if not humanoid or not hrp then return end
+
+            if not humanoid:FindFirstChild("LockState") then
+                humanoid.WalkSpeed = 0
+                humanoid.JumpPower = 0
+                humanoid.AutoRotate = false
+                humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+                local marker = Instance.new("BoolValue", humanoid)
+                marker.Name = "LockState"
+                marker.Value = true
+                humanoid:SetAttribute("LockCFrame", hrp.CFrame)
+            end
+
+            local savedCFrame = humanoid:GetAttribute("LockCFrame")
+            if savedCFrame then
+                hrp.Velocity = Vector3.zero
+                hrp.RotVelocity = Vector3.zero
+                hrp.CFrame = savedCFrame
+            end
+        end)
+    else
+        lockRunning = false
+        if lockConnection then
+            lockConnection:Disconnect()
+            lockConnection = nil
+        end
+        local char = player.Character
+        if char then
+            local humanoid = char:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid.WalkSpeed = 250
+                humanoid.JumpPower = 50
+                humanoid.AutoRotate = true
+                humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+                if humanoid:FindFirstChild("LockState") then
+                    humanoid.LockState:Destroy()
+                end
+                humanoid:SetAttribute("LockCFrame", nil)
+            end
+        end
+    end
+end)
+
 local switch = tabgodmode:AddSwitch("Disable Trade", function(State)
             if State then
                 game:GetService("ReplicatedStorage").rEvents.tradingEvent:FireServer("disableTrading")
@@ -3443,3 +3501,39 @@ Extra:AddButton("Equip Mighty Monster", function()
         task.wait(0.1)
     end
 end)
+
+local nothingLabel = Extra:AddLabel("____________________________________________________")
+nothingLabel.TextSize = 18
+
+local MiscLabel = Extra:AddLabel("Misc")
+MiscLabel.TextSize = 25
+
+local selectedSpeed = 125
+
+Extra:AddTextBox("Speed", function(value)
+    local selectedSpeed = value
+ 
+    _G.AutoSpeed = true
+ 
+    if _G.AutoSpeed then
+        if game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("Humanoid") then
+            game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = tonumber(selectedSpeed)
+        end
+    end
+end)
+
+Extra:AddSwitch("Music", function(state)
+if state then
+			local sound = Instance.new("Sound")
+			sound.Name = "BackgroundMusic"
+			sound.SoundId = "rbxassetid://5410083226"
+			sound.Volume = 1
+			sound.Looped = true
+			sound.Parent = game.Workspace
+			sound:Play()
+		else
+			if game.Workspace:FindFirstChild("BackgroundMusic") then
+				game.Workspace.BackgroundMusic:Destroy()
+			end
+		end
+end):Set(true)
