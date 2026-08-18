@@ -89,91 +89,6 @@ local function equipPet(petName)
     end
 end
 
-local RebirthingTab = window:AddTab("Rebirthing")
-RebirthingTab:Show()
-RebirthingTab:AddLabel("Farming").TextSize = 20
-
-local fastRebirthEnabled = false
-
-local function fastRebirthLoop()
-    while fastRebirthEnabled do
-        equipPet("Swift Samurai")
-        task.wait(0.4)
-        local targetStrength = 5000 + LocalPlayer.leaderstats.Rebirths.Value * 2550
-        while fastRebirthEnabled and LocalPlayer.leaderstats.Strength.Value < targetStrength do
-            local repsPerCycle = LocalPlayer.MembershipType == Enum.MembershipType.Premium and 8 or 14
-            for _ = 1, repsPerCycle do
-                muscleEvent:FireServer("rep")
-            end
-            task.wait(0.02)
-        end
-        if targetStrength <= LocalPlayer.leaderstats.Strength.Value then
-            equipPet("Tribal Overlord")
-            task.wait(0.25)
-            local currentRebirths = LocalPlayer.leaderstats.Rebirths.Value
-            repeat
-                ReplicatedStorage.rEvents.rebirthRemote:InvokeServer("rebirthRequest")
-                task.wait(0.05)
-            until currentRebirths < LocalPlayer.leaderstats.Rebirths.Value
-            task.wait(0.5)
-        end
-    end
-end
-
-RebirthingTab:AddSwitch("Fast Rebirth", function(enabled)
-    fastRebirthEnabled = enabled
-    if enabled then
-        fastRebirthLoop()
-    end
-end)
-
-local sizeEnabled = false
-RebirthingTab:AddSwitch("Set Size 1", function(enabled)
-    sizeEnabled = enabled
-    if sizeEnabled then
-        task.spawn(function()
-            while sizeEnabled do
-                ReplicatedStorage.rEvents.changeSpeedSizeRemote:InvokeServer("changeSize", 1)
-                task.wait(0.01)
-            end
-        end)
-    end
-end):Set(false)
-
-local lockPositionEnabled = false
-RebirthingTab:AddSwitch("Lock Position", function(enabled)
-    lockPositionEnabled = enabled
-    if lockPositionEnabled then
-        local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-        local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
-        local lockedPosition = humanoidRootPart.Position
-        task.spawn(function()
-            while lockPositionEnabled do
-                humanoidRootPart.Velocity = Vector3.new(0, 0, 0)
-                humanoidRootPart.RotVelocity = Vector3.new(0, 0, 0)
-                humanoidRootPart.CFrame = CFrame.new(lockedPosition)
-                task.wait(0.05)
-            end
-        end)
-    end
-end):Set(false)
-
-RebirthingTab:AddLabel("Pets").TextSize = 20
-
-RebirthingTab:AddSwitch("Show Pets", function(enabled)
-    if LocalPlayer:FindFirstChild("hidePets") then
-        LocalPlayer.hidePets.Value = enabled
-    end
-end):Set(true)
-
-RebirthingTab:AddButton("Equip Swift Samurai", function()
-    equipPet("Swift Samurai")
-end)
-
-RebirthingTab:AddButton("Equip Tribal Overlord", function()
-    equipPet("Tribal Overlord")
-end)
-
 local FastFarmingTab = window:AddTab("Fast Farming")
 FastFarmingTab:Show()
 FastFarmingTab:AddLabel("Farming").TextSize = 20
@@ -519,112 +434,137 @@ TeleportsTab:AddButton("Frost Gym", function()
     teleportTo(Vector3.new(-2623, 7.36, -409))
 end)
 
-local StatsTab = window:AddTab("Stats")
-StatsTab:Show()
+local features = window:AddTab("Stats")
+features:Show()
 
-local leaderstats = LocalPlayer:WaitForChild("leaderstats")
+local player = game.Players.LocalPlayer
+local leaderstats = player:WaitForChild("leaderstats")
 local strengthStat = leaderstats:WaitForChild("Strength")
-local rebirthsStat = leaderstats:WaitForChild("Rebirths")
-local durabilityStat = LocalPlayer:WaitForChild("Durability")
+local durabilityStat = player:WaitForChild("Durability")
 
 local function formatNumber(number)
-    local negative = number < 0
-    local absolute = math.abs(number)
-    if absolute >= 1e15 then
-        return (negative and "-" or "") .. string.format("%.2fQa", absolute / 1e15)
-    elseif absolute >= 1e12 then
-        return (negative and "-" or "") .. string.format("%.2fT", absolute / 1e12)
-    elseif absolute >= 1e9 then
-        return (negative and "-" or "") .. string.format("%.2fB", absolute / 1e9)
-    elseif absolute >= 1e6 then
-        return (negative and "-" or "") .. string.format("%.2fM", absolute / 1e6)
-    elseif absolute >= 1e3 then
-        return (negative and "-" or "") .. string.format("%.2fK", absolute / 1e3)
+    local isNegative = number < 0
+    number = math.abs(number)
+
+    if number >= 1e15 then
+        return (isNegative and "-" or "") .. string.format("%.2fQa", number / 1e15)
+    elseif number >= 1e12 then
+        return (isNegative and "-" or "") .. string.format("%.2fT", number / 1e12)
+    elseif number >= 1e9 then
+        return (isNegative and "-" or "") .. string.format("%.2fB", number / 1e9)
+    elseif number >= 1e6 then
+        return (isNegative and "-" or "") .. string.format("%.2fM", number / 1e6)
+    elseif number >= 1e3 then
+        return (isNegative and "-" or "") .. string.format("%.2fK", number / 1e3)
     else
-        return (negative and "-" or "") .. string.format("%.2f", absolute)
+        return (isNegative and "-" or "") .. string.format("%.2f", number)
     end
 end
 
-local timeLabel = StatsTab:AddLabel("⏱️Time:")
-timeLabel.TextSize = 24
-timeLabel.Font = Enum.Font.PatrickHand
+local stopwatchLabel = features:AddLabel("⏱️Time: 0d 0h 0m 0s")
+stopwatchLabel.TextSize = 24
+stopwatchLabel.Font = Enum.Font.PatrickHand
 
-local timeValueLabel = StatsTab:AddLabel("0d 0h 0m 0s")
-timeValueLabel.TextSize = 20
-timeValueLabel.Font = Enum.Font.PatrickHand
+local projectedStrengthLabel = features:AddLabel("Projected Strength: 0 /Hour | 0 /Day")
+projectedStrengthLabel.TextSize = 20
+projectedStrengthLabel.Font = Enum.Font.PatrickHand
 
-local rebirthsPaceLabel = StatsTab:AddLabel("Projected Rebirths: 0 /Hour | 0 /Day")
-rebirthsPaceLabel.TextSize = 20
-rebirthsPaceLabel.Font = Enum.Font.PatrickHand
 
-local strengthPaceLabel = StatsTab:AddLabel("Projected Strength: 0 /Hour | 0 /Day")
-strengthPaceLabel.TextSize = 20
-strengthPaceLabel.Font = Enum.Font.PatrickHand
+local projectedDurabilityLabel = features:AddLabel("Projected Durability: 0 /Hour | 0 /Day")
+projectedDurabilityLabel.TextSize = 20
+projectedDurabilityLabel.Font = Enum.Font.PatrickHand
 
-local durabilityPaceLabel = StatsTab:AddLabel("Projected Durability: 0 /Hour | 0 /Day")
-durabilityPaceLabel.TextSize = 20
-durabilityPaceLabel.Font = Enum.Font.PatrickHand
+features:AddLabel("").TextSize = 10
 
-StatsTab:AddLabel("").TextSize = 10
-
-local statsLabel = StatsTab:AddLabel("Stats:")
+local statsLabel = features:AddLabel("Stats:")
 statsLabel.TextSize = 24
 statsLabel.Font = Enum.Font.PatrickHand
 
-local strengthLabel = StatsTab:AddLabel("Strength: 0 | Gained: 0")
+local strengthLabel = features:AddLabel("Strength: 0 | Gained: 0")
 strengthLabel.TextSize = 20
 strengthLabel.Font = Enum.Font.PatrickHand
 
-local durabilityLabel = StatsTab:AddLabel("Durability: 0 | Gained: 0")
+
+local durabilityLabel = features:AddLabel("Durability: 0 | Gained: 0")
 durabilityLabel.TextSize = 20
 durabilityLabel.Font = Enum.Font.PatrickHand
-
-local rebirthsLabel = StatsTab:AddLabel("Rebirths: 0 | Gained: 0")
-rebirthsLabel.TextSize = 20
-rebirthsLabel.Font = Enum.Font.PatrickHand
 
 local startTime = tick()
 local initialStrength = strengthStat.Value
 local initialDurability = durabilityStat.Value
-local initialRebirths = rebirthsStat.Value
+local trackingStarted = false
+
+local strengthHistory = {}
+local durabilityHistory = {}
+local calculationInterval = 10
 
 task.spawn(function()
-    local lastUpdateTime = 0
+    local lastCalcTime = tick()
+
     while true do
         local currentTime = tick()
-        local elapsedTime = currentTime - startTime
-        local days = math.floor(elapsedTime / 86400)
-        local hours = math.floor(elapsedTime % 86400 / 3600)
-        local minutes = math.floor(elapsedTime % 3600 / 60)
-        local seconds = math.floor(elapsedTime % 60)
-
-        timeValueLabel.Text = string.format("%dd %dh %dm %ds", days, hours, minutes, seconds)
-
         local currentStrength = strengthStat.Value
-        local currentRebirths = rebirthsStat.Value
         local currentDurability = durabilityStat.Value
-        local strengthGained = currentStrength - initialStrength
-        local durabilityGained = currentDurability - initialDurability
-        local rebirthsGained = currentRebirths - initialRebirths
 
-        strengthLabel.Text = "Strength: " .. formatNumber(currentStrength) .. " | Gained: " .. formatNumber(strengthGained)
-        durabilityLabel.Text = "Durability: " .. formatNumber(currentDurability) .. " | Gained: " .. formatNumber(durabilityGained)
-        rebirthsLabel.Text = "Rebirths: " .. formatNumber(currentRebirths) .. " | Gained: " .. formatNumber(rebirthsGained)
-
-        if currentTime - lastUpdateTime >= 6 then
-            local rebirthsPerSecond = rebirthsGained / elapsedTime
-            local strengthPerSecond = strengthGained / elapsedTime
-            local durabilityPerSecond = durabilityGained / elapsedTime
-
-            rebirthsPaceLabel.Text = "Rebirth Pace: " .. formatNumber(math.floor(rebirthsPerSecond * 3600)) .. "/Hour | " .. formatNumber(math.floor(rebirthsPerSecond * 86400)) .. "/Day"
-            strengthPaceLabel.Text = "Strength Pace: " .. formatNumber(math.floor(strengthPerSecond * 3600)) .. "/Hour | " .. formatNumber(math.floor(strengthPerSecond * 86400)) .. "/Day"
-            durabilityPaceLabel.Text = "Durability Pace: " .. formatNumber(math.floor(durabilityPerSecond * 3600)) .. "/Hour | " .. formatNumber(math.floor(durabilityPerSecond * 86400)) .. "/Day"
+        if not trackingStarted and (currentStrength - initialStrength) >= 100e9 then
+            trackingStarted = true
+            startTime = tick()
+            strengthHistory = {}
+            durabilityHistory = {}
         end
 
-        task.wait(0.05)
-        lastUpdateTime = currentTime
+        if trackingStarted then
+            local elapsedTime = currentTime - startTime
+            local days = math.floor(elapsedTime / (24 * 3600))
+            local hours = math.floor((elapsedTime % (24 * 3600)) / 3600)
+            local minutes = math.floor((elapsedTime % 3600) / 60)
+            local seconds = math.floor(elapsedTime % 60)
+
+            stopwatchLabel.Text = string.format("Fast Rep Time: %dd %dh %dm %ds", days, hours, minutes, seconds)
+
+            local sessionStrengthDelta = currentStrength - initialStrength
+            local sessionDurabilityDelta = currentDurability - initialDurability
+
+            strengthLabel.Text = "Strength: " .. formatNumber(currentStrength) .. " | Gained: " .. formatNumber(sessionStrengthDelta)
+            durabilityLabel.Text = "Durability: " .. formatNumber(currentDurability) .. " | Gained: " .. formatNumber(sessionDurabilityDelta)
+
+            table.insert(strengthHistory, {time = currentTime, value = currentStrength})
+            table.insert(durabilityHistory, {time = currentTime, value = currentDurability})
+
+            while #strengthHistory > 0 and currentTime - strengthHistory[1].time > calculationInterval do
+                table.remove(strengthHistory, 1)
+            end
+            while #durabilityHistory > 0 and currentTime - durabilityHistory[1].time > calculationInterval do
+                table.remove(durabilityHistory, 1)
+            end
+
+            if currentTime - lastCalcTime >= calculationInterval then
+                lastCalcTime = currentTime
+
+                if #strengthHistory >= 2 then
+                    local strengthDelta = strengthHistory[#strengthHistory].value - strengthHistory[1].value
+                    local strengthPerSecond = strengthDelta / calculationInterval
+                    local strengthPerHour = math.floor(strengthPerSecond * 3600)
+                    local strengthPerDay = math.floor(strengthPerSecond * 86400)
+
+                    projectedStrengthLabel.Text = "Strength Pace: " .. formatNumber(strengthPerHour) .. "/Hour | " .. formatNumber(strengthPerDay) .. "/Day"
+                end
+
+                if #durabilityHistory >= 2 then
+                    local durabilityDelta = durabilityHistory[#durabilityHistory].value - durabilityHistory[1].value
+                    local durabilityPerSecond = durabilityDelta / calculationInterval
+                    local durabilityPerHour = math.floor(durabilityPerSecond * 3600)
+                    local durabilityPerDay = math.floor(durabilityPerSecond * 86400)
+
+                    projectedDurabilityLabel.Text = "Durability Pace: " .. formatNumber(durabilityPerHour) .. "/Hour | " .. formatNumber(durabilityPerDay) .. "/Day"
+                end
+            end
+        end
+
+        task.wait(0.01)
     end
 end)
+
 
 local InfoTab = window:AddTab("Info")
 InfoTab:Show()
