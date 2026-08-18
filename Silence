@@ -1,1 +1,639 @@
+local Players = game:GetService("Players")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local VirtualUser = game:GetService("VirtualUser")
+local LocalPlayer = Players.LocalPlayer
+local muscleEvent = LocalPlayer:WaitForChild("muscleEvent", 5)
 
+local themeSuccess, themeData = pcall(function()
+    return loadstring(game:HttpGet("https://pastebin.com/raw/pq9Y42T0", true))()
+end)
+
+local themeColor = nil
+if themeSuccess and themeData then
+    themeColor = themeData[LocalPlayer.UserId]
+end
+
+local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/ISPPs54/Ui/refs/heads/main/eeee", true))()
+local window = library:AddWindow("Silence | Paid Cracked By ZTX", {
+    main_color = themeColor,
+    min_size = Vector2.new(505, 420),
+    can_resize = false,
+})
+
+local antiAFKConnection
+local function setupAntiAFK()
+    if antiAFKConnection then
+        antiAFKConnection:Disconnect()
+    end
+    antiAFKConnection = LocalPlayer.Idled:Connect(function()
+        VirtualUser:CaptureController()
+        VirtualUser:ClickButton2(Vector2.new())
+    end)
+end
+setupAntiAFK()
+
+local function removePortals()
+    for _, portal in pairs(game:GetDescendants()) do
+        if portal.Name == "RobloxForwardPortals" then
+            portal:Destroy()
+        end
+    end
+    if _G.AdRemovalConnection then
+        _G.AdRemovalConnection:Disconnect()
+    end
+    _G.AdRemovalConnection = game.DescendantAdded:Connect(function(descendant)
+        if descendant.Name == "RobloxForwardPortals" then
+            descendant:Destroy()
+        end
+    end)
+end
+removePortals()
+
+local blockedFrames = {
+    "strengthFrame",
+    "durabilityFrame",
+    "agilityFrame",
+}
+for _, name in ipairs(blockedFrames) do
+    local frame = ReplicatedStorage:FindFirstChild(name)
+    if frame and frame:IsA("GuiObject") then
+        frame.Visible = false
+    end
+end
+ReplicatedStorage.ChildAdded:Connect(function(child)
+    if table.find(blockedFrames, child.Name) and child:IsA("GuiObject") then
+        child.Visible = false
+    end
+end)
+
+local function unequipAllPets()
+    for _, folder in pairs(LocalPlayer.petsFolder:GetChildren()) do
+        if folder:IsA("Folder") then
+            for _, pet in pairs(folder:GetChildren()) do
+                ReplicatedStorage.rEvents.equipPetEvent:FireServer("unequipPet", pet)
+            end
+        end
+    end
+    task.wait(0.1)
+end
+
+local function equipPet(petName)
+    unequipAllPets()
+    task.wait(0.01)
+    for _, pet in pairs(LocalPlayer.petsFolder.Unique:GetChildren()) do
+        if pet.Name == petName then
+            ReplicatedStorage.rEvents.equipPetEvent:FireServer("equipPet", pet)
+        end
+    end
+end
+
+local RebirthingTab = window:AddTab("Rebirthing")
+RebirthingTab:Show()
+RebirthingTab:AddLabel("Farming").TextSize = 20
+
+local fastRebirthEnabled = false
+
+local function fastRebirthLoop()
+    while fastRebirthEnabled do
+        equipPet("Swift Samurai")
+        task.wait(0.4)
+        local targetStrength = 5000 + LocalPlayer.leaderstats.Rebirths.Value * 2550
+        while fastRebirthEnabled and LocalPlayer.leaderstats.Strength.Value < targetStrength do
+            local repsPerCycle = LocalPlayer.MembershipType == Enum.MembershipType.Premium and 8 or 14
+            for _ = 1, repsPerCycle do
+                muscleEvent:FireServer("rep")
+            end
+            task.wait(0.02)
+        end
+        if targetStrength <= LocalPlayer.leaderstats.Strength.Value then
+            equipPet("Tribal Overlord")
+            task.wait(0.25)
+            local currentRebirths = LocalPlayer.leaderstats.Rebirths.Value
+            repeat
+                ReplicatedStorage.rEvents.rebirthRemote:InvokeServer("rebirthRequest")
+                task.wait(0.05)
+            until currentRebirths < LocalPlayer.leaderstats.Rebirths.Value
+            task.wait(0.5)
+        end
+    end
+end
+
+RebirthingTab:AddSwitch("Fast Rebirth", function(enabled)
+    fastRebirthEnabled = enabled
+    if enabled then
+        fastRebirthLoop()
+    end
+end)
+
+local sizeEnabled = false
+RebirthingTab:AddSwitch("Set Size 1", function(enabled)
+    sizeEnabled = enabled
+    if sizeEnabled then
+        task.spawn(function()
+            while sizeEnabled do
+                ReplicatedStorage.rEvents.changeSpeedSizeRemote:InvokeServer("changeSize", 1)
+                task.wait(0.01)
+            end
+        end)
+    end
+end):Set(false)
+
+local lockPositionEnabled = false
+RebirthingTab:AddSwitch("Lock Position", function(enabled)
+    lockPositionEnabled = enabled
+    if lockPositionEnabled then
+        local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+        local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+        local lockedPosition = humanoidRootPart.Position
+        task.spawn(function()
+            while lockPositionEnabled do
+                humanoidRootPart.Velocity = Vector3.new(0, 0, 0)
+                humanoidRootPart.RotVelocity = Vector3.new(0, 0, 0)
+                humanoidRootPart.CFrame = CFrame.new(lockedPosition)
+                task.wait(0.05)
+            end
+        end)
+    end
+end):Set(false)
+
+RebirthingTab:AddLabel("Pets").TextSize = 20
+
+RebirthingTab:AddSwitch("Show Pets", function(enabled)
+    if LocalPlayer:FindFirstChild("hidePets") then
+        LocalPlayer.hidePets.Value = enabled
+    end
+end):Set(true)
+
+RebirthingTab:AddButton("Equip Swift Samurai", function()
+    equipPet("Swift Samurai")
+end)
+
+RebirthingTab:AddButton("Equip Tribal Overlord", function()
+    equipPet("Tribal Overlord")
+end)
+
+local FastFarmingTab = window:AddTab("Fast Farming")
+FastFarmingTab:Show()
+FastFarmingTab:AddLabel("Farming").TextSize = 20
+
+local fastRepEnabled = false
+local repSpeed = 1
+
+local function getPing()
+    local stats = game:GetService("Stats")
+    local performanceStats = stats:FindFirstChild("PerformanceStats")
+    if performanceStats then
+        performanceStats = performanceStats:FindFirstChild("Ping")
+    end
+    return performanceStats and performanceStats:GetValue() or 0
+end
+
+FastFarmingTab:AddTextBox("Rep Speed", function(value)
+    local speed = tonumber(value)
+    if speed and speed > 0 then
+        repSpeed = math.floor(speed)
+    end
+end, {placeholder = "1"})
+
+local function fastRepLoop()
+    while fastRepEnabled do
+        local startTime = tick()
+        while tick() - startTime < 0.75 and fastRepEnabled do
+            for _ = 1, repSpeed do
+                muscleEvent:FireServer("rep")
+            end
+            task.wait(0.02)
+        end
+        while fastRepEnabled and getPing() >= 100 do
+            task.wait(1)
+        end
+    end
+end
+
+FastFarmingTab:AddSwitch("Fast Rep", function(enabled)
+    fastRepEnabled = enabled
+    if enabled then
+        task.spawn(fastRepLoop)
+    end
+end)
+
+FastFarmingTab:AddLabel("Misc").TextSize = 20
+
+local function useProteinEgg()
+    local egg = LocalPlayer.Character:FindFirstChild("Protein Egg") or LocalPlayer.Backpack:FindFirstChild("Protein Egg")
+    if egg then
+        muscleEvent:FireServer("proteinEgg", egg)
+    end
+end
+
+local autoEggEnabled = false
+task.spawn(function()
+    while true do
+        while autoEggEnabled do
+            useProteinEgg()
+            task.wait(1800)
+        end
+        task.wait(1)
+    end
+end)
+
+FastFarmingTab:AddSwitch("Auto Egg", function(enabled)
+    autoEggEnabled = enabled
+    if enabled then
+        useProteinEgg()
+    end
+end):Set(false)
+
+local function useTropicalShake()
+    local shake = LocalPlayer.Character:FindFirstChild("Tropical Shake") or LocalPlayer.Backpack:FindFirstChild("Tropical Shake")
+    if shake then
+        muscleEvent:FireServer("tropicalShake", shake)
+    end
+end
+
+local autoShakeEnabled = false
+task.spawn(function()
+    while true do
+        while autoShakeEnabled do
+            useTropicalShake()
+            task.wait(900)
+        end
+        task.wait(1)
+    end
+end)
+
+FastFarmingTab:AddSwitch("Auto Shake", function(enabled)
+    autoShakeEnabled = enabled
+    if enabled then
+        useTropicalShake()
+    end
+end):Set(false)
+
+FastFarmingTab:AddButton("Anti Lag", function()
+    local playerGui = LocalPlayer:WaitForChild("PlayerGui")
+    local lighting = game:GetService("Lighting")
+
+    for _, gui in pairs(playerGui:GetChildren()) do
+        if gui:IsA("ScreenGui") then
+            gui:Destroy()
+        end
+    end
+
+    for _, descendant in pairs(workspace:GetDescendants()) do
+        if descendant:IsA("ParticleEmitter") then
+            descendant:Destroy()
+        end
+    end
+
+    for _, descendant in pairs(workspace:GetDescendants()) do
+        if descendant:IsA("PointLight") or descendant:IsA("SpotLight") or descendant:IsA("SurfaceLight") then
+            descendant:Destroy()
+        end
+    end
+
+    for _, child in pairs(lighting:GetChildren()) do
+        if child:IsA("Sky") then
+            child:Destroy()
+        end
+    end
+
+    local darkSky = Instance.new("Sky")
+    darkSky.Name = "DarkSky"
+    darkSky.SkyboxBk = "rbxassetid://0"
+    darkSky.SkyboxDn = "rbxassetid://0"
+    darkSky.SkyboxFt = "rbxassetid://0"
+    darkSky.SkyboxLf = "rbxassetid://0"
+    darkSky.SkyboxRt = "rbxassetid://0"
+    darkSky.SkyboxUp = "rbxassetid://0"
+    darkSky.Parent = lighting
+
+    lighting.Brightness = 0
+    lighting.ClockTime = 0
+    lighting.TimeOfDay = "00:00:00"
+    lighting.OutdoorAmbient = Color3.new(0, 0, 0)
+    lighting.Ambient = Color3.new(0, 0, 0)
+    lighting.FogColor = Color3.new(0, 0, 0)
+    lighting.FogEnd = 100
+
+    task.spawn(function()
+        while true do
+            task.wait(5)
+            if not lighting:FindFirstChild("DarkSky") then
+                darkSky:Clone().Parent = lighting
+            end
+            lighting.Brightness = 0
+            lighting.ClockTime = 0
+            lighting.OutdoorAmbient = Color3.new(0, 0, 0)
+            lighting.Ambient = Color3.new(0, 0, 0)
+            lighting.FogColor = Color3.new(0, 0, 0)
+            lighting.FogEnd = 100
+        end
+    end)
+end)
+
+FastFarmingTab:AddLabel("Pets").TextSize = 20
+
+FastFarmingTab:AddButton("Equip Swift Samurai", function()
+    equipPet("Swift Samurai")
+end)
+
+FastFarmingTab:AddButton("Equip Tribal Overlord", function()
+    equipPet("Tribal Overlord")
+end)
+
+local FarmingTab = window:AddTab("Farming")
+FarmingTab:Show()
+FarmingTab:AddLabel("Misc").TextSize = 20
+
+FarmingTab:AddSwitch("Anti-AFK", function(enabled)
+    if enabled then
+        setupAntiAFK()
+    else
+        if antiAFKConnection then
+            antiAFKConnection:Disconnect()
+            antiAFKConnection = nil
+        end
+    end
+end):Set(true)
+
+FarmingTab:AddSwitch("Auto Lift (Slow its the Gamepass)", function(enabled)
+    if LocalPlayer:FindFirstChild("autoLiftEnabled") then
+        LocalPlayer.autoLiftEnabled.Value = enabled
+    end
+end):Set(false)
+
+FarmingTab:AddLabel("Machines").TextSize = 20
+
+local function teleportAndInteract(position)
+    local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    character:WaitForChild("HumanoidRootPart").CFrame = CFrame.new(position)
+    task.wait(0.2)
+    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+    task.wait(0.05)
+    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
+end
+
+FarmingTab:AddButton("Jungle Lift", function()
+    teleportAndInteract(Vector3.new(-8642.396484375, 6.7980651855, 2086.1030273))
+end)
+
+FarmingTab:AddButton("Jungle Squat", function()
+    teleportAndInteract(Vector3.new(-8371.43359375, 6.79806327, 2858.8852539))
+end)
+
+FarmingTab:AddButton("King Lift", function()
+    teleportAndInteract(Vector3.new(-8769.083, 17.219, -5665.84228))
+end)
+
+FarmingTab:AddButton("King Squat", function()
+    teleportAndInteract(Vector3.new(-8762.1689, 17.219, -6044.0498))
+end)
+
+FarmingTab:AddButton("Legends Lift", function()
+    teleportAndInteract(Vector3.new(4528.474609375, 989.0000629425, -4001.05151367))
+end)
+
+FarmingTab:AddButton("Legends Squat", function()
+    teleportAndInteract(Vector3.new(4431.306152, 991.5455322, -4051.4296))
+end)
+
+FarmingTab:AddButton("Legends Pull Up", function()
+    teleportAndInteract(Vector3.new(4298.6323, 991.5404, -4119.97363))
+end)
+
+local InvCleanerTab = window:AddTab("Inv Cleaner")
+InvCleanerTab:AddLabel("Misc").TextSize = 20
+
+local eggDevourEnabled = false
+task.spawn(function()
+    while true do
+        while eggDevourEnabled do
+            useProteinEgg()
+            task.wait(1)
+        end
+        task.wait(0.5)
+    end
+end)
+
+InvCleanerTab:AddSwitch("Egg Devour", function(enabled)
+    eggDevourEnabled = enabled
+    if enabled then
+        useProteinEgg()
+    end
+end):Set(false)
+
+local consumables = {
+    "Tropical Shake",
+    "Energy Shake",
+    "Protein Bar",
+    "TOUGH Bar",
+    "Protein Shake",
+    "ULTRA Shake",
+    "Energy Bar",
+}
+
+local function convertToEventName(itemName)
+    local words = {}
+    for word in itemName:gmatch("%S+") do
+        table.insert(words, word:lower())
+    end
+    for i = 2, #words do
+        words[i] = words[i]:sub(1, 1):upper() .. words[i]:sub(2)
+    end
+    return table.concat(words)
+end
+
+local function consumeAllItems()
+    for _, itemName in ipairs(consumables) do
+        local item = LocalPlayer.Character:FindFirstChild(itemName) or LocalPlayer.Backpack:FindFirstChild(itemName)
+        if item then
+            muscleEvent:FireServer(convertToEventName(itemName), item)
+        end
+    end
+end
+
+local eatEverythingEnabled = false
+task.spawn(function()
+    while true do
+        while eatEverythingEnabled do
+            consumeAllItems()
+            task.wait(0.6)
+        end
+        task.wait(0.35)
+    end
+end)
+
+InvCleanerTab:AddSwitch("Eat Everything", function(enabled)
+    eatEverythingEnabled = enabled
+    if enabled then
+        consumeAllItems()
+    end
+end):Set(false)
+
+local TeleportsTab = window:AddTab("Teleports")
+TeleportsTab:Show()
+TeleportsTab:AddLabel("Main").TextSize = 20
+
+local function teleportTo(position)
+    local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    character:WaitForChild("HumanoidRootPart").CFrame = CFrame.new(position)
+end
+
+TeleportsTab:AddButton("Tiny Island", function()
+    teleportTo(Vector3.new(-37.1, 9.2, 1919))
+end)
+
+TeleportsTab:AddButton("Main Island", function()
+    teleportTo(Vector3.new(16.07, 9.08, 133.8))
+end)
+
+TeleportsTab:AddButton("Beach", function()
+    teleportTo(Vector3.new(-8, 9, -169.2))
+end)
+
+TeleportsTab:AddLabel("Gyms").TextSize = 22
+
+TeleportsTab:AddButton("Muscle King Gym", function()
+    teleportTo(Vector3.new(-8665.4, 17.21, -5792.9))
+end)
+
+TeleportsTab:AddButton("Jungle Gym", function()
+    teleportTo(Vector3.new(-8543, 6.8, 2400))
+end)
+
+TeleportsTab:AddButton("Legends Gym", function()
+    teleportTo(Vector3.new(4516, 991.5, -3856))
+end)
+
+TeleportsTab:AddButton("Infernal Gym", function()
+    teleportTo(Vector3.new(-6759, 7.36, -1284))
+end)
+
+TeleportsTab:AddButton("Mythical Gym", function()
+    teleportTo(Vector3.new(2250, 7.37, 1073.2))
+end)
+
+TeleportsTab:AddButton("Frost Gym", function()
+    teleportTo(Vector3.new(-2623, 7.36, -409))
+end)
+
+local StatsTab = window:AddTab("Stats")
+StatsTab:Show()
+
+local leaderstats = LocalPlayer:WaitForChild("leaderstats")
+local strengthStat = leaderstats:WaitForChild("Strength")
+local rebirthsStat = leaderstats:WaitForChild("Rebirths")
+local durabilityStat = LocalPlayer:WaitForChild("Durability")
+
+local function formatNumber(number)
+    local negative = number < 0
+    local absolute = math.abs(number)
+    if absolute >= 1e15 then
+        return (negative and "-" or "") .. string.format("%.2fQa", absolute / 1e15)
+    elseif absolute >= 1e12 then
+        return (negative and "-" or "") .. string.format("%.2fT", absolute / 1e12)
+    elseif absolute >= 1e9 then
+        return (negative and "-" or "") .. string.format("%.2fB", absolute / 1e9)
+    elseif absolute >= 1e6 then
+        return (negative and "-" or "") .. string.format("%.2fM", absolute / 1e6)
+    elseif absolute >= 1e3 then
+        return (negative and "-" or "") .. string.format("%.2fK", absolute / 1e3)
+    else
+        return (negative and "-" or "") .. string.format("%.2f", absolute)
+    end
+end
+
+local timeLabel = StatsTab:AddLabel("⏱️Time:")
+timeLabel.TextSize = 24
+timeLabel.Font = Enum.Font.PatrickHand
+
+local timeValueLabel = StatsTab:AddLabel("0d 0h 0m 0s")
+timeValueLabel.TextSize = 20
+timeValueLabel.Font = Enum.Font.PatrickHand
+
+local rebirthsPaceLabel = StatsTab:AddLabel("Projected Rebirths: 0 /Hour | 0 /Day")
+rebirthsPaceLabel.TextSize = 20
+rebirthsPaceLabel.Font = Enum.Font.PatrickHand
+
+local strengthPaceLabel = StatsTab:AddLabel("Projected Strength: 0 /Hour | 0 /Day")
+strengthPaceLabel.TextSize = 20
+strengthPaceLabel.Font = Enum.Font.PatrickHand
+
+local durabilityPaceLabel = StatsTab:AddLabel("Projected Durability: 0 /Hour | 0 /Day")
+durabilityPaceLabel.TextSize = 20
+durabilityPaceLabel.Font = Enum.Font.PatrickHand
+
+StatsTab:AddLabel("").TextSize = 10
+
+local statsLabel = StatsTab:AddLabel("Stats:")
+statsLabel.TextSize = 24
+statsLabel.Font = Enum.Font.PatrickHand
+
+local strengthLabel = StatsTab:AddLabel("Strength: 0 | Gained: 0")
+strengthLabel.TextSize = 20
+strengthLabel.Font = Enum.Font.PatrickHand
+
+local durabilityLabel = StatsTab:AddLabel("Durability: 0 | Gained: 0")
+durabilityLabel.TextSize = 20
+durabilityLabel.Font = Enum.Font.PatrickHand
+
+local rebirthsLabel = StatsTab:AddLabel("Rebirths: 0 | Gained: 0")
+rebirthsLabel.TextSize = 20
+rebirthsLabel.Font = Enum.Font.PatrickHand
+
+local startTime = tick()
+local initialStrength = strengthStat.Value
+local initialDurability = durabilityStat.Value
+local initialRebirths = rebirthsStat.Value
+
+task.spawn(function()
+    local lastUpdateTime = 0
+    while true do
+        local currentTime = tick()
+        local elapsedTime = currentTime - startTime
+        local days = math.floor(elapsedTime / 86400)
+        local hours = math.floor(elapsedTime % 86400 / 3600)
+        local minutes = math.floor(elapsedTime % 3600 / 60)
+        local seconds = math.floor(elapsedTime % 60)
+
+        timeValueLabel.Text = string.format("%dd %dh %dm %ds", days, hours, minutes, seconds)
+
+        local currentStrength = strengthStat.Value
+        local currentRebirths = rebirthsStat.Value
+        local currentDurability = durabilityStat.Value
+        local strengthGained = currentStrength - initialStrength
+        local durabilityGained = currentDurability - initialDurability
+        local rebirthsGained = currentRebirths - initialRebirths
+
+        strengthLabel.Text = "Strength: " .. formatNumber(currentStrength) .. " | Gained: " .. formatNumber(strengthGained)
+        durabilityLabel.Text = "Durability: " .. formatNumber(currentDurability) .. " | Gained: " .. formatNumber(durabilityGained)
+        rebirthsLabel.Text = "Rebirths: " .. formatNumber(currentRebirths) .. " | Gained: " .. formatNumber(rebirthsGained)
+
+        if currentTime - lastUpdateTime >= 6 then
+            local rebirthsPerSecond = rebirthsGained / elapsedTime
+            local strengthPerSecond = strengthGained / elapsedTime
+            local durabilityPerSecond = durabilityGained / elapsedTime
+
+            rebirthsPaceLabel.Text = "Rebirth Pace: " .. formatNumber(math.floor(rebirthsPerSecond * 3600)) .. "/Hour | " .. formatNumber(math.floor(rebirthsPerSecond * 86400)) .. "/Day"
+            strengthPaceLabel.Text = "Strength Pace: " .. formatNumber(math.floor(strengthPerSecond * 3600)) .. "/Hour | " .. formatNumber(math.floor(strengthPerSecond * 86400)) .. "/Day"
+            durabilityPaceLabel.Text = "Durability Pace: " .. formatNumber(math.floor(durabilityPerSecond * 3600)) .. "/Hour | " .. formatNumber(math.floor(durabilityPerSecond * 86400)) .. "/Day"
+        end
+
+        task.wait(0.05)
+        lastUpdateTime = currentTime
+    end
+end)
+
+local InfoTab = window:AddTab("Info")
+InfoTab:Show()
+
+InfoTab:AddLabel("Script is made by Henne ♥️ Cracked By ZTX").TextSize = 20
+InfoTab:AddLabel("Any Problems/Questions? -> donna.ltc on Discord").TextSize = 20
+
+InfoTab:AddLabel("")
+InfoTab:AddLabel("")
+InfoTab:AddLabel("")
+InfoTab:AddLabel("")
+
+InfoTab:AddLabel("SILENCE // PAID VERSION").TextSize = 56
