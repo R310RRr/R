@@ -576,11 +576,11 @@ end)
 task.spawn(function()
     task.wait(3)
     
-    teleportToJungleSquat()
+    teleportToIndustrialSquat()
     
     task.wait(2)
     
-    teleportToJungleSquat()
+    teleportToIndustrialSquat()
     
     task.wait(1)
     
