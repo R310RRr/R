@@ -296,29 +296,34 @@ local function stopSpinWheel()
     autoSpinWheel = false
 end
 
+local Players = game:GetService("Players")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+
+local Player = Players.LocalPlayer
+local teleportAttempts = 0
+
 local function getCharacter()
     local char = Player.Character
+
     if not char then
-        Player.CharacterAdded:Wait()
-        char = Player.Character
+        char = Player.CharacterAdded:Wait()
     end
+
     return char
 end
-
-local teleportAttempts = 0
 
 local function teleportToIndustrialSquat()
     teleportAttempts = 0
 
     local function attemptTeleport()
-        teleportAttempts = teleportAttempts + 1
+        teleportAttempts += 1
 
-        local success, err = pcall(function()
+        local success = pcall(function()
             local char = getCharacter()
             local hrp = char:WaitForChild("HumanoidRootPart", 5)
 
             if not hrp then
-                return false
+                return
             end
 
             hrp.CFrame = CFrame.new(-5217, 60, 5418)
@@ -328,20 +333,18 @@ local function teleportToIndustrialSquat()
             VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
             task.wait(0.1)
             VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
-
-            return true
         end)
 
-        if not success then
-            if teleportAttempts < 3 then
-                task.wait(1)
-                attemptTeleport()
-            end
+        if not success and teleportAttempts < 3 then
+            task.wait(1)
+            attemptTeleport()
         end
     end
 
     attemptTeleport()
 end
+
+teleportToIndustrialSquat()
 
 local function antiLag()
     local player = game.Players.LocalPlayer
