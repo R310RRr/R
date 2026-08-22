@@ -321,7 +321,7 @@ local function teleportToIndustrialSquat()
                 return false
             end
 
-            hrp.CFrame = CFrame.new(-8371.43359375, 6.79806327, 2858.88525390)
+            hrp.CFrame = CFrame.new(-5217, 60, 5418)
 
             task.wait(0.3)
 
